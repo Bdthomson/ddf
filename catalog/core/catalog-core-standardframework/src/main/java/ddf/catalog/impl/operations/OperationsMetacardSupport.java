@@ -29,6 +29,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +37,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.activation.MimeType;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
@@ -45,6 +47,7 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.mime.MediaType;
 import org.codice.ddf.platform.util.InputValidation;
+import org.codice.ddf.platform.util.SingleIdSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +66,8 @@ public class OperationsMetacardSupport {
   //
   private final FrameworkProperties frameworkProperties;
 
-  private final MetacardFactory metacardFactory;
-
-  public OperationsMetacardSupport(
-      FrameworkProperties frameworkProperties, MetacardFactory metacardFactory) {
+  public OperationsMetacardSupport(FrameworkProperties frameworkProperties) {
     this.frameworkProperties = frameworkProperties;
-    this.metacardFactory = metacardFactory;
   }
 
   /**
@@ -90,7 +89,8 @@ public class OperationsMetacardSupport {
       List<ContentItem> incomingContentItems,
       Map<String, Metacard> metacardMap,
       List<ContentItem> contentItems,
-      Map<String, Map<String, Path>> tmpContentPaths)
+      Map<String, Map<String, Path>> tmpContentPaths,
+      Map<String, ? extends Serializable> arguments)
       throws IngestException {
     for (ContentItem contentItem : incomingContentItems) {
       try {
@@ -147,22 +147,33 @@ public class OperationsMetacardSupport {
           fileName = updateFileExtension(mimeTypeRaw, fileName);
         }
 
-        Metacard metacard =
-            metacardFactory.generateMetacard(mimeTypeRaw, contentItem.getId(), fileName, tmpPath);
-        metacardMap.put(metacard.getId(), metacard);
+        List<Metacard> metacards =
+            frameworkProperties
+                .getTransform()
+                .transform(
+                    new MimeType(mimeTypeRaw),
+                    new SingleIdSupplier(contentItem.getId()),
+                    fileName,
+                    tmpPath.toFile(),
+                    null,
+                    arguments);
 
-        ContentItem generatedContentItem =
-            new ContentItemImpl(
-                metacard.getId(),
-                StringUtils.isNotEmpty(contentItem.getQualifier())
-                    ? contentItem.getQualifier()
-                    : "",
-                com.google.common.io.Files.asByteSource(tmpPath.toFile()),
-                mimeTypeRaw,
-                fileName,
-                size,
-                metacard);
-        contentItems.add(generatedContentItem);
+        for (Metacard metacard : metacards) {
+          metacardMap.put(metacard.getId(), metacard);
+
+          ContentItem generatedContentItem =
+              new ContentItemImpl(
+                  metacard.getId(),
+                  StringUtils.isNotEmpty(contentItem.getQualifier())
+                      ? contentItem.getQualifier()
+                      : "",
+                  com.google.common.io.Files.asByteSource(tmpPath.toFile()),
+                  mimeTypeRaw,
+                  fileName,
+                  size,
+                  metacard);
+          contentItems.add(generatedContentItem);
+        }
       } catch (Exception e) {
         tmpContentPaths
             .values()
