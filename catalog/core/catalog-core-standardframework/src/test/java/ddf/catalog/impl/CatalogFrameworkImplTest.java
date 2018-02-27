@@ -178,8 +178,6 @@ import org.junit.rules.MethodRule;
 import org.junit.rules.TestWatchman;
 import org.junit.runners.model.FrameworkMethod;
 import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
 import org.osgi.framework.BundleContext;
@@ -199,6 +197,8 @@ public class CatalogFrameworkImplTest {
   private static final Date DEFAULT_EXPIRATION = Date.from(Instant.now().minus(1, DAYS));
 
   private static final Date DEFAULT_EXPIRATION_CUSTOM = Date.from(Instant.now().minus(2, DAYS));
+
+  private static final String NO_TRANSFORMER_ID = "NONE";
 
   CatalogFrameworkImpl framework;
 
@@ -337,14 +337,11 @@ public class CatalogFrameworkImplTest {
             any(String.class),
             any(Map.class)))
         .thenAnswer(
-            new Answer<List<Metacard>>() {
-              @Override
-              public List<Metacard> answer(InvocationOnMock invocationOnMock) throws Throwable {
-                Supplier<String> supplier = (Supplier<String>) invocationOnMock.getArguments()[1];
-                MetacardImpl metacard = new MetacardImpl();
-                metacard.setId(supplier.get());
-                return Collections.singletonList(metacard);
-              }
+            invocationOnMock -> {
+              Supplier<String> supplier = (Supplier<String>) invocationOnMock.getArguments()[1];
+              MetacardImpl metacard = new MetacardImpl();
+              metacard.setId(supplier.get());
+              return Collections.singletonList(metacard);
             });
 
     mockRemoteDeleteOperations = mock(RemoteDeleteOperations.class);
@@ -1563,7 +1560,7 @@ public class CatalogFrameworkImplTest {
             provider, storageProvider, context, eventAdmin, true, transform);
     SourceResponse response = new SourceResponseImpl(null, null);
 
-    framework.transform(response, "NONE", new HashMap<>());
+    framework.transform(response, NO_TRANSFORMER_ID, new HashMap<>());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -1578,7 +1575,7 @@ public class CatalogFrameworkImplTest {
         this.createDummyCatalogFramework(
             provider, storageProvider, context, eventAdmin, true, transform);
 
-    framework.transform((SourceResponse) null, "NONE", new HashMap<>());
+    framework.transform((SourceResponse) null, NO_TRANSFORMER_ID, new HashMap<>());
   }
 
   @Test
@@ -1594,7 +1591,7 @@ public class CatalogFrameworkImplTest {
             provider, storageProvider, context, eventAdmin, true, transform);
     SourceResponse response = new SourceResponseImpl(null, null);
 
-    BinaryContent content = framework.transform(response, "NONE", new HashMap<>());
+    BinaryContent content = framework.transform(response, NO_TRANSFORMER_ID, new HashMap<>());
 
     assertNotNull(content);
   }
@@ -1613,7 +1610,7 @@ public class CatalogFrameworkImplTest {
     MetacardImpl newCard = new MetacardImpl();
     newCard.setId(null);
 
-    framework.transform(newCard, "NONE", new HashMap<>());
+    framework.transform(newCard, NO_TRANSFORMER_ID, new HashMap<>());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -1628,7 +1625,7 @@ public class CatalogFrameworkImplTest {
         this.createDummyCatalogFramework(
             provider, storageProvider, context, eventAdmin, true, transform);
 
-    framework.transform((Metacard) null, "NONE", new HashMap<>());
+    framework.transform((Metacard) null, NO_TRANSFORMER_ID, new HashMap<>());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -1643,7 +1640,7 @@ public class CatalogFrameworkImplTest {
         this.createDummyCatalogFramework(
             provider, storageProvider, context, eventAdmin, true, transform);
 
-    framework.transform((Metacard) null, "NONE", new HashMap<>());
+    framework.transform((Metacard) null, NO_TRANSFORMER_ID, new HashMap<>());
   }
 
   @Test
@@ -1660,7 +1657,7 @@ public class CatalogFrameworkImplTest {
     MetacardImpl newCard = new MetacardImpl();
     newCard.setId(null);
 
-    BinaryContent content = framework.transform(newCard, "NONE", new HashMap<>());
+    BinaryContent content = framework.transform(newCard, NO_TRANSFORMER_ID, new HashMap<>());
 
     assertNotNull(content);
   }
@@ -2284,7 +2281,7 @@ public class CatalogFrameworkImplTest {
     MetacardImpl newCard = new MetacardImpl();
     newCard.setId(null);
 
-    framework.transform(newCard, "NONE", new HashMap<>());
+    framework.transform(newCard, NO_TRANSFORMER_ID, new HashMap<>());
   }
 
   /**

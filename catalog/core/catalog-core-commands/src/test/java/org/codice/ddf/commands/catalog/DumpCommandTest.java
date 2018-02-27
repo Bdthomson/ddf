@@ -252,8 +252,6 @@ public class DumpCommandTest extends CommandCatalogFrameworkCommon {
                 + id
                 + ".zip");
 
-    assertThat(consoleOutput.getOutput(), containsString(" 1 file(s) dumped in "));
-
     assertThat(targetZipFile.exists(), is(true));
 
     ZipFile zipFile = new ZipFile(targetZipFile);

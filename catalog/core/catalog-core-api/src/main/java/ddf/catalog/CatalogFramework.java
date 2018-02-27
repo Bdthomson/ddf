@@ -147,11 +147,11 @@ public interface CatalogFramework extends Describable {
    * </ol>
    *
    * @param createRequest the {@link CreateStorageRequest}
+   * @param arguments this map gets passed to the underlying transformers
    * @return {@link CreateResponse}
    * @throws IngestException if an issue occurs during the update
    * @throws SourceUnavailableException if the source being updated is unavailable
    */
-  // TODO document 'arguments'
   CreateResponse create(
       CreateStorageRequest createRequest, Map<String, ? extends Serializable> arguments)
       throws IngestException, SourceUnavailableException;
@@ -529,11 +529,11 @@ public interface CatalogFramework extends Describable {
    * </ol>
    *
    * @param updateRequest the {@link UpdateStorageRequest}
+   * @param arguments this map gets passed to the underlying transformers
    * @return {@link UpdateResponse}
    * @throws IngestException if an issue occurs during the update
    * @throws SourceUnavailableException if the source being updated is unavailable
    */
-  // TODO document 'arguments'
   UpdateResponse update(
       UpdateStorageRequest updateRequest, Map<String, ? extends Serializable> arguments)
       throws IngestException, SourceUnavailableException;

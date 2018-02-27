@@ -13,6 +13,7 @@
  */
 package org.codice.ddf.catalog.transform.impl;
 
+import com.google.common.io.Files;
 import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardCreationException;
@@ -69,8 +70,7 @@ public class TransformImpl implements Transform {
       String transformerId,
       Map<String, ? extends Serializable> transformerArguments)
       throws MetacardCreationException {
-    try (InputStream transformerStream =
-        com.google.common.io.Files.asByteSource(inputFile).openStream()) {
+    try (InputStream transformerStream = Files.asByteSource(inputFile).openStream()) {
       List<Metacard> metacards =
           transform(mimeType, idSupplier, transformerStream, transformerId, transformerArguments);
       return metacards

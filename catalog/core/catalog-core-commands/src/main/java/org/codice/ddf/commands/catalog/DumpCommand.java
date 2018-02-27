@@ -121,7 +121,7 @@ public class DumpCommand extends CqlCommands {
   @Option(
     name = "--transformer",
     required = false,
-    aliases = {"-t", "TransformerProperties"},
+    aliases = {"-t", "Transformer"},
     multiValued = false,
     description =
         "The metacard transformer ID to use to transform metacards into data files. "
@@ -349,10 +349,10 @@ public class DumpCommand extends CqlCommands {
       ZipFile zipFile = new ZipFile(zipPath);
       int index = 1;
       for (BinaryContent binaryContent : binaryContents) {
-        ZipParameters p = new ZipParameters();
-        p.setSourceExternalStream(true);
-        p.setFileNameInZip(String.format("%d%s", index++, generateExtension()));
-        zipFile.addStream(binaryContent.getInputStream(), p);
+        ZipParameters zipParameters = new ZipParameters();
+        zipParameters.setSourceExternalStream(true);
+        zipParameters.setFileNameInZip(String.format("%d%s", index++, generateExtension()));
+        zipFile.addStream(binaryContent.getInputStream(), zipParameters);
       }
     } catch (ZipException e) {
       throw new CatalogTransformerException(

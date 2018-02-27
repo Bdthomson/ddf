@@ -98,11 +98,10 @@ public abstract class TransformerProducer extends DefaultProducer {
     Transform transform = endpoint.getComponent().getTransform();
 
     if (transform != null) {
-      LOGGER.debug("Got a Transform service");
+      LOGGER.trace("Got a Transform service");
 
       metacard = transform(in, metacard, mimeType, transformerId);
     } else {
-      LOGGER.debug("Did not find a Transform service");
       throw new CatalogTransformerException("Did not find a Transform service");
     }
 
