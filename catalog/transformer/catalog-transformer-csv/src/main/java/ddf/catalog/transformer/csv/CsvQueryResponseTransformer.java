@@ -14,31 +14,25 @@
 
 package ddf.catalog.transformer.csv;
 
+import static ddf.catalog.transformer.csv.common.CsvTransformer.createResponse;
+import static ddf.catalog.transformer.csv.common.CsvTransformer.getAllRequestedAttributes;
+import static ddf.catalog.transformer.csv.common.CsvTransformer.sortAttributes;
+import static ddf.catalog.transformer.csv.common.CsvTransformer.writeSearchResultsToCsv;
+
 import ddf.catalog.data.AttributeDescriptor;
-import ddf.catalog.data.AttributeType;
 import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.Metacard;
-import ddf.catalog.data.MetacardType;
 import ddf.catalog.data.Result;
-import ddf.catalog.data.impl.BinaryContentImpl;
 import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.transform.CatalogTransformerException;
 import ddf.catalog.transform.QueryResponseTransformer;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
-import java.nio.charset.Charset;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +41,7 @@ import org.slf4j.LoggerFactory;
  *
  * @see ddf.catalog.transform.QueryResponseTransformer
  */
+@SuppressWarnings("ALL")
 public class CsvQueryResponseTransformer implements QueryResponseTransformer {
   private static final Logger LOGGER = LoggerFactory.getLogger(CsvQueryResponseTransformer.class);
 
@@ -78,6 +73,13 @@ public class CsvQueryResponseTransformer implements QueryResponseTransformer {
       SourceResponse upstreamResponse, Map<String, Serializable> arguments)
       throws CatalogTransformerException {
 
+    List<Metacard> metacards =
+        upstreamResponse
+            .getResults()
+            .stream()
+            .map(Result::getMetacard)
+            .collect(Collectors.toList());
+
     Set<String> hiddenFields =
         Optional.ofNullable((Set<String>) arguments.get(HIDDEN_FIELDS_KEY))
             .orElse(Collections.emptySet());
@@ -91,108 +93,13 @@ public class CsvQueryResponseTransformer implements QueryResponseTransformer {
             .orElse(Collections.emptyMap());
 
     Set<AttributeDescriptor> allAttributeDescriptors =
-        getAllRequestedAttributes(upstreamResponse.getResults(), hiddenFields);
+        getAllRequestedAttributes(metacards, hiddenFields);
 
     List<AttributeDescriptor> sortedAttributeDescriptors =
         sortAttributes(allAttributeDescriptors, attributeOrder);
 
-    Appendable csv =
-        writeSearchResultsToCsv(upstreamResponse, columnAliasMap, sortedAttributeDescriptors);
+    Appendable csv = writeSearchResultsToCsv(metacards, columnAliasMap, sortedAttributeDescriptors);
 
     return createResponse(csv);
-  }
-
-  private BinaryContent createResponse(final Appendable csv) {
-    InputStream inputStream =
-        new ByteArrayInputStream(csv.toString().getBytes(Charset.defaultCharset()));
-    BinaryContent binaryContent = new BinaryContentImpl(inputStream);
-    return binaryContent;
-  }
-
-  private Appendable writeSearchResultsToCsv(
-      final SourceResponse upstreamResponse,
-      Map<String, String> columnAliasMap,
-      List<AttributeDescriptor> sortedAttributeDescriptors)
-      throws CatalogTransformerException {
-    StringBuilder stringBuilder = new StringBuilder();
-
-    try {
-      CSVPrinter csvPrinter = new CSVPrinter(stringBuilder, CSVFormat.RFC4180);
-      printColumnHeaders(csvPrinter, sortedAttributeDescriptors, columnAliasMap);
-
-      upstreamResponse
-          .getResults()
-          .stream()
-          .map(Result::getMetacard)
-          .forEach(mc -> printMetacard(csvPrinter, mc, sortedAttributeDescriptors));
-
-      return csvPrinter.getOut();
-    } catch (IOException ioe) {
-      throw new CatalogTransformerException(ioe.getMessage(), ioe);
-    }
-  }
-
-  private void printMetacard(
-      final CSVPrinter csvPrinter,
-      final Metacard metacard,
-      final List<AttributeDescriptor> attributeDescriptors) {
-
-    Iterator<Serializable> metacardIterator = new MetacardIterator(metacard, attributeDescriptors);
-
-    printData(csvPrinter, metacardIterator);
-  }
-
-  private void printColumnHeaders(
-      final CSVPrinter csvPrinter,
-      final List<AttributeDescriptor> attributeDescriptors,
-      Map<String, String> aliasMap) {
-    Iterator<String> columnHeaderIterator =
-        new ColumnHeaderIterator(attributeDescriptors, aliasMap);
-
-    printData(csvPrinter, columnHeaderIterator);
-  }
-
-  private void printData(final CSVPrinter csvPrinter, final Iterator iterator) {
-    try {
-      csvPrinter.printRecord(() -> iterator);
-    } catch (IOException ioe) {
-      LOGGER.error(ioe.getMessage(), ioe);
-    }
-  }
-
-  private List<AttributeDescriptor> sortAttributes(
-      final Set<AttributeDescriptor> attributeSet, final List<String> attributeOrder) {
-    CsvAttributeDescriptorComparator attributeComparator =
-        new CsvAttributeDescriptorComparator(attributeOrder);
-
-    return attributeSet.stream().sorted(attributeComparator).collect(Collectors.toList());
-  }
-
-  private Set<AttributeDescriptor> getAllRequestedAttributes(
-      final List<Result> results, final Set<String> hiddenFields) {
-
-    Set<AttributeDescriptor> allAttributes = new HashSet<>();
-
-    results
-        .stream()
-        .map(Result::getMetacard)
-        .map(Metacard::getMetacardType)
-        .map(MetacardType::getAttributeDescriptors)
-        .forEach(
-            descriptorSet ->
-                descriptorSet
-                    .stream()
-                    .filter(
-                        desc ->
-                            !AttributeType.AttributeFormat.BINARY.equals(
-                                desc.getType().getAttributeFormat()))
-                    .filter(
-                        desc ->
-                            !AttributeType.AttributeFormat.OBJECT.equals(
-                                desc.getType().getAttributeFormat()))
-                    .filter(desc -> !hiddenFields.contains(desc.getName()))
-                    .forEach(allAttributes::add));
-
-    return allAttributes;
   }
 }
