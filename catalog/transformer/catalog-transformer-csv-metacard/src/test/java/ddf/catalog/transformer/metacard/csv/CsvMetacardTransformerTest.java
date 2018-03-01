@@ -29,7 +29,25 @@ public class CsvMetacardTransformerTest {
   public void testMetacard() throws CatalogTransformerException, IOException, ParseException {
 
     MetacardImpl metacard = new MetacardImpl();
-    metacard.setLocation("Test Location");
+    metacard.setAttribute("name", "ThisIsMyName");
+    metacard.setAttribute("alias", "Name");
+
+    final String ATTRIBUTE_CONFIG =
+        "{\n"
+            + "  \"attributes\": [\n"
+            + "    {\n"
+            + "      \"name\": \"name\",\n"
+            + "      \"alias\": \"Name\"\n"
+            + "    },\n"
+            + "    {\n"
+            + "      \"name\": \"created_at\",\n"
+            + "      \"alias\": \"Created At\"\n"
+            + "    }\n"
+            + "  ],\n"
+            + "  \"excluded\": [\"string\"]\n"
+            + "}";
+
+    csvMetacardTransformer.setAttributeConfig(ATTRIBUTE_CONFIG);
 
     // Calling function under test
     List<BinaryContent> content =

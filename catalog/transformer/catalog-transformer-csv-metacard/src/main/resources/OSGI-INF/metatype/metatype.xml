@@ -19,8 +19,8 @@
          name="CSV Metacard Transformer"
          id="ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer">
 
-        <AD description="Example: [{&quot;attributes&quot;: {&quot;name&quot;: &quot;title&quot;, &quot;alias&quot;: &quot;Title&quot;}, &quot;excluded&quot;: [&quot;myExcludedField&quot;]}]"
-            name="Atribute Config" id="attributeConfig"
+        <AD description="Example: {&quot;attributes&quot;: [{&quot;name&quot;: &quot;title&quot;, &quot;alias&quot;: &quot;Title&quot;}], &#xD;&quot;excluded&quot;: [&quot;myExcludedField&quot;]}"
+            name="Attribute Config" id="attributeConfig"
             type="String"
             default=""/>
     </OCD>

@@ -1,9 +1,9 @@
 package ddf.catalog.transformer.metacard.csv;
 
 import static ddf.catalog.transformer.csv.common.CsvTransformer.getOnlyRequestedAttributes;
-import static ddf.catalog.transformer.csv.common.CsvTransformer.sortAttributes;
 import static ddf.catalog.transformer.csv.common.CsvTransformer.writeSearchResultsToCsv;
 
+import com.google.gson.Gson;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.BinaryContent;
@@ -11,18 +11,19 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.BinaryContentImpl;
 import ddf.catalog.transform.CatalogTransformerException;
 import ddf.catalog.transform.MetacardTransformer;
+import ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer.AttributeConfig.MyAttribute;
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.activation.MimeType;
 import javax.activation.MimeTypeParseException;
 import org.codice.ddf.catalog.transform.MultiMetacardTransformer;
-import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +52,7 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
 
   private static final String COLUMN_ORDER_KEY = "columnOrder";
 
-  private JSONObject attributeConfig;
+  private AttributeConfig attributeConfig;
 
   static {
     try {
@@ -63,14 +64,33 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
     }
   }
 
-  public void setAttributeConfig(String attributeConfig) {
-    validateJSON(attributeConfig);
-    this.attributeConfig = toJSON(attributeConfig);
+  // TODO: Make both lists start out as empty?
+  public class AttributeConfig {
+    List<MyAttribute> attributes;
+    List<String> excluded;
+
+    class MyAttribute {
+      String name;
+      String alias;
+
+      String getName() {
+        return this.name;
+      }
+
+      String getAlias() {
+        return this.alias;
+      }
+    }
   }
 
-  private JSONObject toJSON(String attributeConfig) {
+  public void setAttributeConfig(String attributeConfig) {
+    this.attributeConfig = fromJSON(attributeConfig);
+  }
 
-    return new JSONObject();
+  private AttributeConfig fromJSON(String attributeConfigString) {
+    Gson g = new Gson();
+    AttributeConfig attributeConfig = g.fromJson(attributeConfigString, AttributeConfig.class);
+    return attributeConfig;
   }
 
   private void validateJSON(String attributeConfig) {}
@@ -80,23 +100,27 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
       List<Metacard> metacards, Map<String, ? extends Serializable> arguments)
       throws CatalogTransformerException {
 
-    // TODO: What are Arguments
+    Map<String, String> aliasMap =
+        this.attributeConfig
+            .attributes
+            .stream()
+            .collect(Collectors.toMap(MyAttribute::getName, MyAttribute::getAlias));
 
-    // TODO: Pull in config service to get what attribute names we want and what sort order.
-
-    // Get requested attributes
+    // Get requested attributes and filter excluded attributes
     Set<AttributeDescriptor> onlyRequestedAttributes =
         getOnlyRequestedAttributes(metacards, Collections.emptySet());
 
     // Sort them
-    List<String> attributeOrder =
-        Optional.ofNullable((List<String>) arguments.get(COLUMN_ORDER_KEY))
-            .orElse(Collections.emptyList());
+    //    List<String> attributeOrder =
+    //        Optional.ofNullable((List<String>) arguments.get(COLUMN_ORDER_KEY))
+    //            .orElse(Collections.emptyList());
 
-    List<AttributeDescriptor> sortedAttributeDescriptors =
-        sortAttributes(onlyRequestedAttributes, attributeOrder);
+    //    List<AttributeDescriptor> sortedAttributeDescriptors =
+    //        sortAttributes(onlyRequestedAttributes, attributeOrder);
 
-    Appendable csv = writeSearchResultsToCsv(metacards, null, sortedAttributeDescriptors);
+    Appendable csv =
+        writeSearchResultsToCsv(
+            metacards, aliasMap, new ArrayList<AttributeDescriptor>(onlyRequestedAttributes));
 
     return Collections.singletonList(getBinaryContent(csv));
   }
