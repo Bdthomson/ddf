@@ -1,6 +1,7 @@
 package ddf.catalog.transformer.metacard.csv;
 
 import static ddf.catalog.transformer.csv.common.CsvTransformer.getOnlyRequestedAttributes;
+import static ddf.catalog.transformer.csv.common.CsvTransformer.sortAttributes;
 import static ddf.catalog.transformer.csv.common.CsvTransformer.writeSearchResultsToCsv;
 
 import com.google.gson.Gson;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.activation.MimeType;
@@ -100,6 +102,12 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
       List<Metacard> metacards, Map<String, ? extends Serializable> arguments)
       throws CatalogTransformerException {
 
+    if (this.attributeConfig == null) {
+      LOGGER.error(
+          "AttributeConfig is null. Please set it in Admin Config -> Catalog -> Configuration -> Csv Metacard Configuration");
+      throw new CatalogTransformerException("AttributeConfig not set.");
+    }
+
     Map<String, String> aliasMap =
         this.attributeConfig
             .attributes
@@ -108,19 +116,24 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
 
     // Get requested attributes and filter excluded attributes
     Set<AttributeDescriptor> onlyRequestedAttributes =
-        getOnlyRequestedAttributes(metacards, Collections.emptySet());
+        getOnlyRequestedAttributes(metacards, aliasMap.keySet(), this.attributeConfig.excluded);
 
     // Sort them
-    //    List<String> attributeOrder =
-    //        Optional.ofNullable((List<String>) arguments.get(COLUMN_ORDER_KEY))
-    //            .orElse(Collections.emptyList());
+    //        List<String> attributeOrder =
+    //            Optional.ofNullable((List<String>) arguments.get(COLUMN_ORDER_KEY))
+    //                .orElse(Collections.emptyList());
 
-    //    List<AttributeDescriptor> sortedAttributeDescriptors =
-    //        sortAttributes(onlyRequestedAttributes, attributeOrder);
+    List<String> attributeOrder =
+        this.attributeConfig
+            .attributes
+            .stream()
+            .map(MyAttribute::getName)
+            .collect(Collectors.toList());
 
-    Appendable csv =
-        writeSearchResultsToCsv(
-            metacards, aliasMap, new ArrayList<AttributeDescriptor>(onlyRequestedAttributes));
+    List<AttributeDescriptor> sortedAttributeDescriptors =
+        sortAttributes(onlyRequestedAttributes, attributeOrder);
+
+    Appendable csv = writeSearchResultsToCsv(metacards, aliasMap, sortedAttributeDescriptors);
 
     return Collections.singletonList(getBinaryContent(csv));
   }

@@ -118,10 +118,13 @@ public class CsvTransformer {
    *
    * @param metacards
    * @param requestedAttributes
+   * @param excluded
    * @return
    */
   public static Set<AttributeDescriptor> getOnlyRequestedAttributes(
-      final List<Metacard> metacards, final Set<String> requestedAttributes) {
+      final List<Metacard> metacards,
+      final Set<String> requestedAttributes,
+      List<String> excluded) {
 
     Set<AttributeDescriptor> attributes = new HashSet<>();
 
@@ -135,15 +138,14 @@ public class CsvTransformer {
                     .stream()
                     .filter(
                         desc ->
-                            // TODO: Change this boolean?
                             !AttributeType.AttributeFormat.BINARY.equals(
                                 desc.getType().getAttributeFormat()))
                     .filter(
                         desc ->
-                            // TODO: Change this boolean?
                             !AttributeType.AttributeFormat.OBJECT.equals(
                                 desc.getType().getAttributeFormat()))
                     .filter(desc -> requestedAttributes.contains(desc.getName()))
+                    .filter(desc -> !excluded.contains(desc.getName()))
                     .forEach(attributes::add));
 
     return attributes;
