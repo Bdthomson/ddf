@@ -1,10 +1,12 @@
 package ddf.catalog.transformer.metacard.csv;
 
+import static ddf.catalog.transformer.csv.common.CsvTransformer.getAllRequestedAttributes;
 import static ddf.catalog.transformer.csv.common.CsvTransformer.getOnlyRequestedAttributes;
 import static ddf.catalog.transformer.csv.common.CsvTransformer.sortAttributes;
 import static ddf.catalog.transformer.csv.common.CsvTransformer.writeSearchResultsToCsv;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.BinaryContent;
@@ -12,12 +14,15 @@ import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.BinaryContentImpl;
 import ddf.catalog.transform.CatalogTransformerException;
 import ddf.catalog.transform.MetacardTransformer;
-import ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer.AttributeConfig.MyAttribute;
+import ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer.AttributeConfig.AttributeConfigItem;
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,13 +51,11 @@ import org.slf4j.LoggerFactory;
  */
 public class CsvMetacardTransformer implements MultiMetacardTransformer {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CsvMetacardTransformer.class);
-
   private final String ID = "csv-metacard-transformer";
 
-  protected static final MimeType DEFAULT_MIME_TYPE = new MimeType();
+  private static final Logger LOGGER = LoggerFactory.getLogger(CsvMetacardTransformer.class);
 
-  private static final String COLUMN_ORDER_KEY = "columnOrder";
+  protected static final MimeType DEFAULT_MIME_TYPE = new MimeType();
 
   private AttributeConfig attributeConfig;
 
@@ -67,13 +70,19 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
   }
 
   // TODO: Make both lists start out as empty?
-  public class AttributeConfig {
-    List<MyAttribute> attributes;
-    List<String> excluded;
+  public static class AttributeConfig {
 
-    class MyAttribute {
+    List<AttributeConfigItem> attributes = new ArrayList<>();
+    List<String> excluded = new ArrayList<>();
+
+    public static class AttributeConfigItem {
       String name;
       String alias;
+
+      AttributeConfigItem(String name, String alias) {
+        this.name = name;
+        this.alias = alias;
+      }
 
       String getName() {
         return this.name;
@@ -86,52 +95,79 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
   }
 
   public void setAttributeConfig(String attributeConfig) {
-    this.attributeConfig = fromJSON(attributeConfig);
+    AttributeConfig attrConfig;
+    try {
+      attrConfig = new Gson().fromJson(attributeConfig, AttributeConfig.class);
+    } catch (JsonParseException e) {
+      LOGGER.error("Invalid JSON for AttributeConfig.", e);
+      return;
+    }
+
+    if (attrConfig == null) return;
+
+    if (isValidConfig(attrConfig)) {
+      this.attributeConfig = attrConfig;
+    }
   }
 
-  private AttributeConfig fromJSON(String attributeConfigString) {
-    Gson g = new Gson();
-    AttributeConfig attributeConfig = g.fromJson(attributeConfigString, AttributeConfig.class);
-    return attributeConfig;
+  public AttributeConfig getAttributeconfig() {
+    return this.attributeConfig;
   }
 
-  private void validateJSON(String attributeConfig) {}
+  private boolean isValidConfig(AttributeConfig attrConfig) {
+    for (AttributeConfigItem attr : attrConfig.attributes) {
+      if (attr.getName() == null) return false;
+    }
+
+    return true;
+  }
 
   @Override
   public List<BinaryContent> transform(
       List<Metacard> metacards, Map<String, ? extends Serializable> arguments)
       throws CatalogTransformerException {
 
-    if (this.attributeConfig == null) {
-      LOGGER.error(
-          "AttributeConfig is null. Please set it in Admin Config -> Catalog -> Configuration -> Csv Metacard Configuration");
-      throw new CatalogTransformerException("AttributeConfig not set.");
+    if (metacards == null){
+      throw new CatalogTransformerException("Metacard list cannot be null.");
     }
 
-    Map<String, String> aliasMap =
-        this.attributeConfig
-            .attributes
-            .stream()
-            .collect(Collectors.toMap(MyAttribute::getName, MyAttribute::getAlias));
+    if (this.attributeConfig == null) {
+      this.attributeConfig = new AttributeConfig();
+    }
 
-    // Get requested attributes and filter excluded attributes
-    Set<AttributeDescriptor> onlyRequestedAttributes =
-        getOnlyRequestedAttributes(metacards, aliasMap.keySet(), this.attributeConfig.excluded);
+    // Can't use collectors.toMap because alias could be null.
+    Map<String, String> aliasMap = new HashMap<>();
+    this.attributeConfig.attributes.forEach(attr -> aliasMap.put(attr.getName(), attr.getAlias()));
 
-    // Sort them
-    //        List<String> attributeOrder =
-    //            Optional.ofNullable((List<String>) arguments.get(COLUMN_ORDER_KEY))
-    //                .orElse(Collections.emptyList());
+    // If attributes provided, only choose those. Otherwise, choose all and sort alphabetically.
+    // In both cases, filter excluded attributes.
+    Set<AttributeDescriptor> attributesToInclude;
+    List<String> attributeOrder;
 
-    List<String> attributeOrder =
-        this.attributeConfig
-            .attributes
-            .stream()
-            .map(MyAttribute::getName)
-            .collect(Collectors.toList());
+    // If requested attributes are not provided, include all attributes.
+    if (this.attributeConfig.attributes.size() != 0) {
+      attributesToInclude =
+          getOnlyRequestedAttributes(metacards, aliasMap.keySet(), this.attributeConfig.excluded);
+      attributeOrder =
+          this.attributeConfig
+              .attributes
+              .stream()
+              .map(AttributeConfigItem::getName)
+              .collect(Collectors.toList());
+    } else {
+      attributesToInclude =
+          getAllRequestedAttributes(metacards, new HashSet<>(this.attributeConfig.excluded));
+
+      attributeOrder =
+          attributesToInclude
+              .stream()
+              .sorted(Comparator.comparing(o -> aliasMap.getOrDefault(o.getName(), o.getName())))
+              .map(AttributeDescriptor::getName)
+              .collect(Collectors.toList());
+    }
 
     List<AttributeDescriptor> sortedAttributeDescriptors =
-        sortAttributes(onlyRequestedAttributes, attributeOrder);
+        sortAttributes(attributesToInclude, attributeOrder);
 
     Appendable csv = writeSearchResultsToCsv(metacards, aliasMap, sortedAttributeDescriptors);
 

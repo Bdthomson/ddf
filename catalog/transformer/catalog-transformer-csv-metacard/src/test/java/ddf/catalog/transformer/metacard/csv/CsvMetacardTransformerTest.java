@@ -1,155 +1,253 @@
 package ddf.catalog.transformer.metacard.csv;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
+import com.google.gson.Gson;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.AttributeType;
-import ddf.catalog.data.AttributeType.AttributeFormat;
 import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.MetacardType;
-import ddf.catalog.data.impl.AttributeDescriptorImpl;
-import ddf.catalog.data.impl.AttributeImpl;
 import ddf.catalog.data.impl.BasicTypes;
-import ddf.catalog.data.impl.MetacardImpl;
-import ddf.catalog.operation.CreateRequest;
 import ddf.catalog.transform.CatalogTransformerException;
-import java.io.IOException;
+import ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer.AttributeConfig;
+import ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer.AttributeConfig.AttributeConfigItem;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import org.json.simple.parser.ParseException;
+import java.util.Scanner;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mock;
+import org.mockito.stubbing.Answer;
 
 public class CsvMetacardTransformerTest {
 
   private CsvMetacardTransformer csvMetacardTransformer;
 
-  private static final String NAME_ATTRIBUTE_KEY = "name";
-  private static final String CREATED_AT_ATTRIBUTE_KEY = "created_at";
-  private static final String EXCLUDE_THIS_ATTRIBUTE_KEY = "exclude_this";
-
-  private static final String ATTRIBUTE_CONFIG =
-        "{\n"
-            + "  \"attributes\": [\n"
-            + "    {\n"
-            + "      \"name\": \"name\",\n"
-            + "      \"alias\": \"Name\"\n"
-            + "    },\n"
-            + "    {\n"
-            + "      \"name\": \"created_at\",\n"
-            + "      \"alias\": \"Created At\"\n"
-            + "    }\n"
-            + "  ],\n"
-            + "  \"excluded\": [\"excludeThis\"]\n"
-            + "}";
-
-  @Mock MetacardType metacardType;
-
-  @Before
-  public void setUp() {
-    csvMetacardTransformer = new CsvMetacardTransformer();
-    initMocks(this);
-
-    ATTRIBUTE_DESCRIPTOR_LIST.clear();
-    METACARD_DATA_MAP.clear();
-
-
-
-    //    when().thenReturn();
-  }
-
-  private static final Object[][] ATTRIBUTE_DATA = {
-      {"attribute1", "value1", BasicTypes.STRING_TYPE},
-      {"attribute2", 101, BasicTypes.INTEGER_TYPE},
-      {"attribute3", 3.14159, BasicTypes.DOUBLE_TYPE},
-      {"attribute4", "value,4", BasicTypes.STRING_TYPE},
-      {"attribute5", "value5", BasicTypes.STRING_TYPE},
-      {"attribute6", "OBJECT", BasicTypes.OBJECT_TYPE},
-      {"attribute7", "BINARY", BasicTypes.BINARY_TYPE}
-  };
+  public static final int METACARD_COUNT = 10;
 
   private static final Map<String, Serializable> METACARD_DATA_MAP = new HashMap<>();
 
   private static final List<AttributeDescriptor> ATTRIBUTE_DESCRIPTOR_LIST = new ArrayList<>();
 
+  private List<Metacard> METACARD_LIST = new ArrayList<>();
+
+  private AttributeConfig ATTRIBUTE_CONFIG;
+
+  @Before
+  public void setUp() {
+    this.csvMetacardTransformer = new CsvMetacardTransformer();
+    initMocks(this);
+
+    ATTRIBUTE_DESCRIPTOR_LIST.clear();
+    METACARD_DATA_MAP.clear();
+    ATTRIBUTE_CONFIG = null;
+
+    buildMetacardDataMap();
+    buildMetacardList();
+    buildAttributeConfig();
+  }
+
+  private static final Object[][] ATTRIBUTE_DATA = {
+    {"attribute1", "value1", BasicTypes.STRING_TYPE},
+    {"attribute2", "value2", BasicTypes.STRING_TYPE},
+    {"attribute3", 101, BasicTypes.INTEGER_TYPE},
+    {"attribute4", 3.14159, BasicTypes.DOUBLE_TYPE},
+    {"attribute5", "value,5", BasicTypes.STRING_TYPE},
+    {"attribute6", "value6", BasicTypes.STRING_TYPE},
+    {"attribute7", "OBJECT", BasicTypes.OBJECT_TYPE},
+    {"attribute8", "BINARY", BasicTypes.BINARY_TYPE}
+  };
+
   @Test
-  public void testMetacard() throws CatalogTransformerException, IOException, ParseException {
+  public void testMetacardWithConfig() throws CatalogTransformerException {
 
-    Set<AttributeDescriptor> attributeDescriptors = new HashSet<>();
-    attributeDescriptors.add(
-        new AttributeDescriptorImpl("other", false, false, false, false, BasicTypes.STRING_TYPE));
-    attributeDescriptors.add(
-        new AttributeDescriptorImpl(
-            NAME_ATTRIBUTE_KEY, false, false, false, false, BasicTypes.STRING_TYPE));
-    attributeDescriptors.add(
-        new AttributeDescriptorImpl(
-            CREATED_AT_ATTRIBUTE_KEY, false, false, false, false, BasicTypes.STRING_TYPE));
-    attributeDescriptors.add(
-        new AttributeDescriptorImpl(
-            EXCLUDE_THIS_ATTRIBUTE_KEY, false, false, false, false, BasicTypes.STRING_TYPE));
+    final String attributeConfigJson = toJson(ATTRIBUTE_CONFIG);
+    csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
 
-    when(metacardType.getAttributeDescriptors()).thenReturn(attributeDescriptors);
-
-    // Create a metacard
-    Metacard metacard = new MetacardImpl(metacardType);
-
-    //
-    metacard.setAttribute(new AttributeImpl(NAME_ATTRIBUTE_KEY, "name_value"));
-    metacard.setAttribute(new AttributeImpl(CREATED_AT_ATTRIBUTE_KEY, "1033223423423"));
-    metacard.setAttribute(new AttributeImpl(EXCLUDE_THIS_ATTRIBUTE_KEY, "do_not_show"));
-
-    csvMetacardTransformer.setAttributeConfig(ATTRIBUTE_CONFIG);
-
-    // Calling function under test
-    List<BinaryContent> content =
-        csvMetacardTransformer.transform(Collections.singletonList(metacard), null);
+    List<BinaryContent> content = csvMetacardTransformer.transform(METACARD_LIST, null);
+    BinaryContent bc = content.get(0);
 
     assertEquals(1, content.size());
-    assertEquals(
-        content.get(0).getMimeTypeValue(), CsvMetacardTransformer.DEFAULT_MIME_TYPE.getBaseType());
+    assertEquals(bc.getMimeTypeValue(), CsvMetacardTransformer.DEFAULT_MIME_TYPE.getBaseType());
+
+    Scanner scanner = new Scanner(bc.getInputStream());
+    scanner.useDelimiter("\\n|\\r|,");
+
+    // Only attributes in "attributes" config field will exist in output.
+    // OBJECT types, BINARY types and excluded attributes will be filtered out
+    // excluded attribute take precedence over attributes that appear in requested attribute list.
+    String[] expectedHeaders = {"column2", "column1", "attribute3", "attribute5"};
+    validate(scanner, expectedHeaders);
+
+    // The scanner will split "value,5" into two tokens even though the CSVPrinter will
+    // handle it correctly.
+    String[] expectedValues = {"", "value2", "value1", "101", "\"value", "5\""};
+
+    for (int i = 0; i < METACARD_COUNT; i++) {
+      validate(scanner, expectedValues);
+    }
+
+    // final new line causes an extra "" value at end of file
+    assertThat(scanner.hasNext(), is(true));
+    assertThat(scanner.next(), is(""));
+    assertThat(scanner.hasNext(), is(false));
   }
 
   @Test
-  public void testMetacardWithAttributes()
-      throws CatalogTransformerException, IOException, ParseException {
-    //
-    //    MetacardImpl metacard = new MetacardImpl();
-    //    metacard.setLocation("Test Location");
-    //
-    //    final Map attributes = new HashMap<String, Serializable>();
-    //
-    //    // Calling function under test
-    //    BinaryContent content = csvMetacardTransformer.transform(metacard, attributes);
-    //
-    //    assertEquals(
-    //        content.getMimeTypeValue(), CsvMetacardTransformer.DEFAULT_MIME_TYPE.getBaseType());
+  public void testMetacardWithOnlyExcludedConfig() throws CatalogTransformerException {
+
+    AttributeConfig attr = new AttributeConfig();
+    attr.excluded = buildList(new String[] {"attribute1", "attribute2"});
+
+    final String attributeConfigJson = toJson(attr);
+    csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
+
+    List<BinaryContent> content = csvMetacardTransformer.transform(METACARD_LIST, null);
+    BinaryContent bc = content.get(0);
+
+    assertEquals(1, content.size());
+    assertEquals(bc.getMimeTypeValue(), CsvMetacardTransformer.DEFAULT_MIME_TYPE.getBaseType());
+
+    Scanner scanner = new Scanner(bc.getInputStream());
+    scanner.useDelimiter("\\n|\\r|,");
+
+    // Only attributes in "attributes" config field will exist in output.
+    // OBJECT types, BINARY types and excluded attributes will be filtered out
+    // excluded attribute take precedence over attributes that appear in requested attribute list.
+    String[] expectedHeaders = {"attribute3", "attribute4", "attribute5", "attribute6"};
+    validate(scanner, expectedHeaders);
+
+    // The scanner will split "value,5" into two tokens even though the CSVPrinter will
+    // handle it correctly by creating an entry surrounded by double quotes i.e. "value,5"
+    String[] expectedValues = {"", "101", "3.14159", "\"value", "5\"", "value6"};
+
+    for (int i = 0; i < METACARD_COUNT; i++) {
+      validate(scanner, expectedValues);
+    }
+
+    // final new line causes an extra "" value at end of file
+    assertThat(scanner.hasNext(), is(true));
+    assertThat(scanner.next(), is(""));
+    assertThat(scanner.hasNext(), is(false));
+  }
+
+  @Test
+  public void testMetacardWithoutConfig() throws CatalogTransformerException {
+
+    List<BinaryContent> content = csvMetacardTransformer.transform(METACARD_LIST, null);
+    BinaryContent bc = content.get(0);
+
+    assertEquals(1, content.size());
+    assertEquals(bc.getMimeTypeValue(), CsvMetacardTransformer.DEFAULT_MIME_TYPE.getBaseType());
+
+    Scanner scanner = new Scanner(bc.getInputStream());
+    scanner.useDelimiter("\\n|\\r|,");
+
+    // Only attributes in "attributes" config field will exist in output.
+    // OBJECT types, BINARY types and excluded attributes will be filtered out
+    // excluded attribute take precedence over attributes that appear in requested attribute list.
+    String[] expectedHeaders = {
+      "attribute1", "attribute2", "attribute3", "attribute4", "attribute5", "attribute6"
+    };
+    validate(scanner, expectedHeaders);
+
+    // The scanner will split "value,5" into two tokens even though the CSVPrinter will
+    // handle it correctly.
+    String[] expectedValues = {
+      "", "value1", "value2", "101", "3.14159", "\"value", "5\"", "value6"
+    };
+
+    for (int i = 0; i < METACARD_COUNT; i++) {
+      validate(scanner, expectedValues);
+    }
+
+    // final new line causes an extra "" value at end of file
+    assertThat(scanner.hasNext(), is(true));
+    assertThat(scanner.next(), is(""));
+    assertThat(scanner.hasNext(), is(false));
   }
 
   @Test(expected = CatalogTransformerException.class)
-  public void testNullMetacard() throws CatalogTransformerException {
-    csvMetacardTransformer.setAttributeConfig(ATTRIBUTE_CONFIG);
+  public void testNullMetacardList() throws CatalogTransformerException {
+    final String attributeConfigJson = toJson(ATTRIBUTE_CONFIG);
+    csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
     new CsvMetacardTransformer().transform(null, null);
   }
 
-  @Test(expected = CatalogTransformerException.class)
-  public void testWhenAttributeConfigNull() throws CatalogTransformerException {
-    MetacardImpl metacard = new MetacardImpl();
-    metacard.setAttribute("name", "ThisIsMyName");
-    metacard.setAttribute("alias", "Name");
-    metacard.setAttribute("excludeThis", "DATA");
+  // Verifies no exception is thrown if a single null metacard is given.
+  @Test
+  public void testNullMetacardInList() throws CatalogTransformerException {
+    final String attributeConfigJson = toJson(ATTRIBUTE_CONFIG);
+    csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
 
-    new CsvMetacardTransformer().transform(Collections.singletonList(metacard), null);
+    new CsvMetacardTransformer().transform(Collections.singletonList(null), null);
+  }
+
+  @Test
+  public void TestSavingInvalidJsonConfig_ParseError() {
+    CsvMetacardTransformer csvMetacardTransformer = new CsvMetacardTransformer();
+    csvMetacardTransformer.setAttributeConfig("{{");
+
+    assertThat(csvMetacardTransformer.getAttributeconfig(), is(nullValue()));
+  }
+
+  @Test
+  public void TestSavingInvalidJsonConfig_InvalidConfigAlias() {
+    AttributeConfig attributeConfig = new AttributeConfig();
+    attributeConfig.attributes = new ArrayList<>();
+    attributeConfig.attributes.add(new AttributeConfigItem(null, "invalid_alias"));
+    String attributeConfigJson = toJson(attributeConfig);
+    CsvMetacardTransformer csvMetacardTransformer = new CsvMetacardTransformer();
+    csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
+
+    assertThat(csvMetacardTransformer.getAttributeconfig(), is(nullValue()));
+  }
+
+  private String toJson(AttributeConfig a) {
+    return new Gson().toJson(a, AttributeConfig.class);
+  }
+
+  private void buildMetacardList() {
+    METACARD_LIST.clear();
+    for (int i = 0; i < METACARD_COUNT; i++) {
+      METACARD_LIST.add(buildMetacard());
+    }
+  }
+
+  private Metacard buildMetacard() {
+    Metacard metacard = mock(Metacard.class);
+
+    Answer<Serializable> answer =
+        invocation -> {
+          String key = invocation.getArgumentAt(0, String.class);
+          return METACARD_DATA_MAP.get(key);
+        };
+
+    when(metacard.getAttribute(anyString())).thenAnswer(answer);
+    MetacardType metacardType = buildMetacardType();
+    when(metacard.getMetacardType()).thenReturn(metacardType);
+    return metacard;
+  }
+
+  private MetacardType buildMetacardType() {
+    MetacardType metacardType = mock(MetacardType.class);
+    when(metacardType.getAttributeDescriptors())
+        .thenReturn(new HashSet<>(ATTRIBUTE_DESCRIPTOR_LIST));
+    return metacardType;
   }
 
   private void buildMetacardDataMap() {
@@ -163,5 +261,41 @@ public class CsvMetacardTransformerTest {
     }
   }
 
-  private getCsv
+  private Attribute buildAttribute(String name, Serializable value) {
+    Attribute attribute = mock(Attribute.class);
+    when(attribute.getName()).thenReturn(name);
+    when(attribute.getValue()).thenReturn(value);
+    return attribute;
+  }
+
+  private AttributeDescriptor buildAttributeDescriptor(String name, AttributeType type) {
+    AttributeDescriptor attributeDescriptor = mock(AttributeDescriptor.class);
+    when(attributeDescriptor.getName()).thenReturn(name);
+    when(attributeDescriptor.getType()).thenReturn(type);
+    return attributeDescriptor;
+  }
+
+  private void buildAttributeConfig() {
+    ATTRIBUTE_CONFIG = new AttributeConfig();
+
+    List<AttributeConfigItem> attributeConfigItems = new ArrayList<>();
+    attributeConfigItems.add(new AttributeConfigItem("attribute2", "column2"));
+    attributeConfigItems.add(new AttributeConfigItem("attribute1", "column1"));
+    attributeConfigItems.add(new AttributeConfigItem("attribute3", null));
+    attributeConfigItems.add(new AttributeConfigItem("attribute5", null));
+    attributeConfigItems.add(new AttributeConfigItem("attribute6", "column6"));
+    ATTRIBUTE_CONFIG.attributes = attributeConfigItems;
+    ATTRIBUTE_CONFIG.excluded = buildList(new String[] {"attribute4", "attribute6"});
+  }
+
+  private ArrayList<String> buildList(String[] entries) {
+    return new ArrayList<>(Arrays.asList(entries));
+  }
+
+  private void validate(Scanner scanner, String[] expectedValues) {
+    for (int i = 0; i < expectedValues.length; i++) {
+      assertThat(scanner.hasNext(), is(true));
+      assertThat(scanner.next(), is(expectedValues[i]));
+    }
+  }
 }

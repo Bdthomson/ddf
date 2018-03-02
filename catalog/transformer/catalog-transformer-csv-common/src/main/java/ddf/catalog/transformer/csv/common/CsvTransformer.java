@@ -92,6 +92,7 @@ public class CsvTransformer {
 
     metacards
         .stream()
+        .filter(Objects::nonNull)
         .map(Metacard::getMetacardType)
         .map(MetacardType::getAttributeDescriptors)
         .forEach(
@@ -130,6 +131,7 @@ public class CsvTransformer {
 
     metacards
         .stream()
+        .filter(Objects::nonNull)
         .map(Metacard::getMetacardType)
         .map(MetacardType::getAttributeDescriptors)
         .forEach(
