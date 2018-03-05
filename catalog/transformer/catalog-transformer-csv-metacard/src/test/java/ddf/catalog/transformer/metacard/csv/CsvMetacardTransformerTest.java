@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) Codice Foundation
+ * <p/>
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or any later version.
+ * <p/>
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details. A copy of the GNU Lesser General Public License
+ * is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ */
 package ddf.catalog.transformer.metacard.csv;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,9 +56,9 @@ public class CsvMetacardTransformerTest {
 
   private static final List<AttributeDescriptor> ATTRIBUTE_DESCRIPTOR_LIST = new ArrayList<>();
 
-  private List<Metacard> METACARD_LIST = new ArrayList<>();
+  private static final List<Metacard> METACARD_LIST = new ArrayList<>();
 
-  private AttributeConfig ATTRIBUTE_CONFIG;
+  private static AttributeConfig attributeConfig;
 
   @Before
   public void setUp() {
@@ -54,7 +67,7 @@ public class CsvMetacardTransformerTest {
 
     ATTRIBUTE_DESCRIPTOR_LIST.clear();
     METACARD_DATA_MAP.clear();
-    ATTRIBUTE_CONFIG = null;
+    attributeConfig = null;
 
     buildMetacardDataMap();
     buildMetacardList();
@@ -75,7 +88,7 @@ public class CsvMetacardTransformerTest {
   @Test
   public void testMetacardWithConfig() throws CatalogTransformerException {
 
-    final String attributeConfigJson = toJson(ATTRIBUTE_CONFIG);
+    final String attributeConfigJson = toJson(attributeConfig);
     csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
 
     List<BinaryContent> content = csvMetacardTransformer.transform(METACARD_LIST, null);
@@ -183,7 +196,7 @@ public class CsvMetacardTransformerTest {
 
   @Test(expected = CatalogTransformerException.class)
   public void testNullMetacardList() throws CatalogTransformerException {
-    final String attributeConfigJson = toJson(ATTRIBUTE_CONFIG);
+    final String attributeConfigJson = toJson(attributeConfig);
     csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
     new CsvMetacardTransformer().transform(null, null);
   }
@@ -191,14 +204,14 @@ public class CsvMetacardTransformerTest {
   // Verifies no exception is thrown if a single null metacard is given.
   @Test
   public void testNullMetacardInList() throws CatalogTransformerException {
-    final String attributeConfigJson = toJson(ATTRIBUTE_CONFIG);
+    final String attributeConfigJson = toJson(attributeConfig);
     csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
 
     new CsvMetacardTransformer().transform(Collections.singletonList(null), null);
   }
 
   @Test
-  public void TestSavingInvalidJsonConfig_ParseError() {
+  public void testSavingInvalidJsonConfigParseError() {
     CsvMetacardTransformer csvMetacardTransformer = new CsvMetacardTransformer();
     csvMetacardTransformer.setAttributeConfig("{{");
 
@@ -206,7 +219,7 @@ public class CsvMetacardTransformerTest {
   }
 
   @Test
-  public void TestSavingInvalidJsonConfig_InvalidConfigAlias() {
+  public void testSavingInvalidJsonConfigInvalidConfigAlias() {
     AttributeConfig attributeConfig = new AttributeConfig();
     attributeConfig.attributes = new ArrayList<>();
     attributeConfig.attributes.add(new AttributeConfigItem(null, "invalid_alias"));
@@ -215,6 +228,11 @@ public class CsvMetacardTransformerTest {
     csvMetacardTransformer.setAttributeConfig(attributeConfigJson);
 
     assertThat(csvMetacardTransformer.getAttributeconfig(), is(nullValue()));
+  }
+
+  @Test
+  public void testGetMimeTypes() {
+    assertThat(csvMetacardTransformer.getMimeTypes().size(), is(1));
   }
 
   private String toJson(AttributeConfig a) {
@@ -276,7 +294,7 @@ public class CsvMetacardTransformerTest {
   }
 
   private void buildAttributeConfig() {
-    ATTRIBUTE_CONFIG = new AttributeConfig();
+    attributeConfig = new AttributeConfig();
 
     List<AttributeConfigItem> attributeConfigItems = new ArrayList<>();
     attributeConfigItems.add(new AttributeConfigItem("attribute2", "column2"));
@@ -284,8 +302,8 @@ public class CsvMetacardTransformerTest {
     attributeConfigItems.add(new AttributeConfigItem("attribute3", null));
     attributeConfigItems.add(new AttributeConfigItem("attribute5", null));
     attributeConfigItems.add(new AttributeConfigItem("attribute6", "column6"));
-    ATTRIBUTE_CONFIG.attributes = attributeConfigItems;
-    ATTRIBUTE_CONFIG.excluded = buildList(new String[] {"attribute4", "attribute6"});
+    attributeConfig.attributes = attributeConfigItems;
+    attributeConfig.excluded = buildList(new String[] {"attribute4", "attribute6"});
   }
 
   private ArrayList<String> buildList(String[] entries) {

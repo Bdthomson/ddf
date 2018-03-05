@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) Codice Foundation
+ * <p/>
+ * This is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or any later version.
+ * <p/>
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details. A copy of the GNU Lesser General Public License
+ * is distributed along with this program and can be found at
+ * <http://www.gnu.org/licenses/lgpl.html>.
+ */
 package ddf.catalog.transformer.metacard.csv;
 
 import static ddf.catalog.transformer.csv.common.CsvTransformer.getAllRequestedAttributes;
@@ -7,13 +20,11 @@ import static ddf.catalog.transformer.csv.common.CsvTransformer.writeSearchResul
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
-import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
 import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.Metacard;
 import ddf.catalog.data.impl.BinaryContentImpl;
 import ddf.catalog.transform.CatalogTransformerException;
-import ddf.catalog.transform.MetacardTransformer;
 import ddf.catalog.transformer.metacard.csv.CsvMetacardTransformer.AttributeConfig.AttributeConfigItem;
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;
@@ -25,7 +36,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.activation.MimeType;
@@ -38,11 +48,6 @@ import org.slf4j.LoggerFactory;
  * Implements the {@link MetacardTransformer} interface to transform a single {@link Metacard}
  * instance to CSV.
  *
- * <p>TODO: Cement description. // * This class places what is returned by {@link
- * Metacard#getLocation()} in the // * geometry JSON object in the GeoJSON output. The rest of the
- * attributes of the Metacard are placed // * in the properties object in the JSON. See geojson.org
- * for the GeoJSON specification.
- *
  * @author Blake Thomson
  * @author ddf.isgs@lmco.com
  * @see MetacardTransformer
@@ -51,7 +56,7 @@ import org.slf4j.LoggerFactory;
  */
 public class CsvMetacardTransformer implements MultiMetacardTransformer {
 
-  private final String ID = "csv-metacard-transformer";
+  private static final String ID = "csv-metacard-transformer";
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CsvMetacardTransformer.class);
 
@@ -69,13 +74,13 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
     }
   }
 
-  // TODO: Make both lists start out as empty?
   public static class AttributeConfig {
 
     List<AttributeConfigItem> attributes = new ArrayList<>();
     List<String> excluded = new ArrayList<>();
 
     public static class AttributeConfigItem {
+
       String name;
       String alias;
 
@@ -103,7 +108,9 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
       return;
     }
 
-    if (attrConfig == null) return;
+    if (attrConfig == null) {
+      return;
+    }
 
     if (isValidConfig(attrConfig)) {
       this.attributeConfig = attrConfig;
@@ -116,7 +123,9 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
 
   private boolean isValidConfig(AttributeConfig attrConfig) {
     for (AttributeConfigItem attr : attrConfig.attributes) {
-      if (attr.getName() == null) return false;
+      if (attr.getName() == null) {
+        return false;
+      }
     }
 
     return true;
@@ -127,7 +136,7 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
       List<Metacard> metacards, Map<String, ? extends Serializable> arguments)
       throws CatalogTransformerException {
 
-    if (metacards == null){
+    if (metacards == null) {
       throw new CatalogTransformerException("Metacard list cannot be null.");
     }
 
@@ -174,9 +183,9 @@ public class CsvMetacardTransformer implements MultiMetacardTransformer {
     return Collections.singletonList(getBinaryContent(csv));
   }
 
-  private BinaryContentImpl getBinaryContent(Appendable CsvText) {
+  private BinaryContentImpl getBinaryContent(Appendable csvText) {
     return new BinaryContentImpl(
-        new ByteArrayInputStream(CsvText.toString().getBytes(StandardCharsets.UTF_8)),
+        new ByteArrayInputStream(csvText.toString().getBytes(StandardCharsets.UTF_8)),
         DEFAULT_MIME_TYPE);
   }
 
