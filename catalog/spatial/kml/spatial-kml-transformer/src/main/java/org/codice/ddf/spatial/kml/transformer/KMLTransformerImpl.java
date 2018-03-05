@@ -51,12 +51,15 @@ import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.activation.MimeType;
 import javax.activation.MimeTypeParseException;
 import javax.security.auth.Subject;
@@ -74,14 +77,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The base Transformer for handling KML requests to take a {@link Metacard} or {@link
- * SourceResponse} and produce a KML representation. This service attempts to first locate a {@link
- * KMLEntryTransformer} for a given {@link Metacard} based on the metadata-content-type. If no
- * {@link KMLEntryTransformer} can be found, the default transformation is performed.
+ * The base Transformer for handling KML requests to take {@link Metacard}, {@link SourceResponse},
+ * or {@Link List<Metacard>} and produce a KML representation. This service attempts to first locate
+ * a {@link KMLEntryTransformer} for a given {@link Metacard} based on the metadata-content-type. If
+ * no {@link KMLEntryTransformer} can be found, the default transformation is performed.
  *
  * @author Ashraf Barakat, Ian Barnett, Keith C Wire
  */
 public class KMLTransformerImpl implements KMLTransformer {
+
+  private static final String ID = "kml-multi-metacard-transformer";
 
   private static final String UTF_8 = "UTF-8";
 
@@ -421,6 +426,17 @@ public class KMLTransformerImpl implements KMLTransformer {
       LOGGER.debug("Null arguments, unable to complete transform");
       throw new CatalogTransformerException("Unable to complete transform without arguments");
     }
+
+    List<Metacard> metacards = upstreamResponse.getResults()
+        .stream()
+        .map(Result::getMetacard)
+        .collect(Collectors.toList());
+
+    return getBinaryContent(metacards, arguments);
+  }
+
+  private BinaryContent getBinaryContent(List<Metacard> metacards,
+      Map<String, Serializable> arguments) {
     String docId = UUID.randomUUID().toString();
 
     String restUriAbsolutePath = (String) arguments.get("url");
@@ -429,9 +445,9 @@ public class KMLTransformerImpl implements KMLTransformer {
     // Transform Metacards to KML
     Document kmlDoc = KmlFactory.createDocument();
     boolean needDefaultStyle = false;
-    for (Result result : upstreamResponse.getResults()) {
+    for (Metacard metacard : metacards) {
       try {
-        Placemark placemark = transformEntry(null, result.getMetacard(), arguments);
+        Placemark placemark = transformEntry(null, metacard, arguments);
         if (placemark.getStyleSelector().isEmpty()
             && StringUtils.isEmpty(placemark.getStyleUrl())) {
           placemark.setStyleUrl("#default");
@@ -441,7 +457,7 @@ public class KMLTransformerImpl implements KMLTransformer {
       } catch (CatalogTransformerException e) {
         LOGGER.debug(
             "Error transforming current metacard ({}) to KML and will continue with remaining query responses.",
-            result.getMetacard().getId(),
+            metacard.getId(),
             e);
       }
     }
@@ -466,7 +482,7 @@ public class KMLTransformerImpl implements KMLTransformer {
 
   private String marshalKml(Kml kmlResult) {
 
-    String kmlResultString = null;
+    String kmlResultString;
     StringWriter writer = new StringWriter();
 
     try {
@@ -481,5 +497,31 @@ public class KMLTransformerImpl implements KMLTransformer {
     kmlResultString = writer.toString();
 
     return kmlResultString;
+  }
+
+  @Override
+  public List<BinaryContent> transform(List<Metacard> metacards,
+      Map<String, ? extends Serializable> arguments) throws CatalogTransformerException {
+    if (metacards == null) {
+      throw new CatalogTransformerException("List of Metacards cannot be null");
+    }
+
+    return Collections.singletonList(getBinaryContent(metacards,
+        (Map<String, Serializable>) arguments));
+  }
+
+  @Override
+  public String getId() {
+    return ID;
+  }
+
+  @Override
+  public Set<MimeType> getMimeTypes() {
+    return Collections.singleton(KML_MIMETYPE);
+  }
+
+  @Override
+  public Map<String, Object> getProperties() {
+    return Collections.emptyMap();
   }
 }
