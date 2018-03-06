@@ -337,7 +337,7 @@ public class KMLTransformerImpl implements KMLTransformer {
 
   private Geometry createKmlGeo(com.vividsolutions.jts.geom.Geometry geo)
       throws CatalogTransformerException {
-    Geometry kmlGeo = null;
+    Geometry kmlGeo;
     if (POINT_TYPE.equals(geo.getGeometryType())) {
       Point jtsPoint = (Point) geo;
       kmlGeo = KmlFactory.createPoint().addToCoordinates(jtsPoint.getX(), jtsPoint.getY());
@@ -506,8 +506,7 @@ public class KMLTransformerImpl implements KMLTransformer {
       throw new CatalogTransformerException("List of Metacards cannot be null");
     }
 
-    return Collections.singletonList(getBinaryContent(metacards,
-        (Map<String, Serializable>) arguments));
+    return Collections.singletonList(getBinaryContent(metacards, Collections.emptyMap()));
   }
 
   @Override
