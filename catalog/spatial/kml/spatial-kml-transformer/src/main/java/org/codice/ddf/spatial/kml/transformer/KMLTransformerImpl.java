@@ -427,16 +427,18 @@ public class KMLTransformerImpl implements KMLTransformer {
       throw new CatalogTransformerException("Unable to complete transform without arguments");
     }
 
-    List<Metacard> metacards = upstreamResponse.getResults()
-        .stream()
-        .map(Result::getMetacard)
-        .collect(Collectors.toList());
+    List<Metacard> metacards =
+        upstreamResponse
+            .getResults()
+            .stream()
+            .map(Result::getMetacard)
+            .collect(Collectors.toList());
 
     return getBinaryContent(metacards, arguments);
   }
 
-  private BinaryContent getBinaryContent(List<Metacard> metacards,
-      Map<String, Serializable> arguments) {
+  private BinaryContent getBinaryContent(
+      List<Metacard> metacards, Map<String, Serializable> arguments) {
     String docId = UUID.randomUUID().toString();
 
     String restUriAbsolutePath = (String) arguments.get("url");
@@ -467,15 +469,12 @@ public class KMLTransformerImpl implements KMLTransformer {
       kmlDoc.getStyleSelector().addAll(defaultStyle);
     }
 
-    final String documentName = StringUtils.isNotBlank(docNameArgument)
-        ? docNameArgument
-        : (KML_RESPONSE_QUEUE_PREFIX + kmlDoc.getFeature().size() + CLOSE_PARENTHESIS);
+    final String documentName =
+        StringUtils.isNotBlank(docNameArgument)
+            ? docNameArgument
+            : (KML_RESPONSE_QUEUE_PREFIX + kmlDoc.getFeature().size() + CLOSE_PARENTHESIS);
 
-    Kml kmlResult =
-        encloseKml(
-            kmlDoc,
-            docId,
-            documentName);
+    Kml kmlResult = encloseKml(kmlDoc, docId, documentName);
 
     String transformedKml = marshalKml(kmlResult);
 
@@ -505,14 +504,15 @@ public class KMLTransformerImpl implements KMLTransformer {
   }
 
   @Override
-  public List<BinaryContent> transform(List<Metacard> metacards,
-      Map<String, ? extends Serializable> arguments) throws CatalogTransformerException {
+  public List<BinaryContent> transform(
+      List<Metacard> metacards, Map<String, ? extends Serializable> arguments)
+      throws CatalogTransformerException {
     if (metacards == null) {
       throw new CatalogTransformerException("List of Metacards cannot be null");
     }
 
-    return Collections.singletonList(getBinaryContent(metacards,
-        (Map<String, Serializable>) arguments));
+    return Collections.singletonList(
+        getBinaryContent(metacards, (Map<String, Serializable>) arguments));
   }
 
   @Override

@@ -11,7 +11,6 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-
 package org.codice.ddf.spatial.kml.transformer;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
@@ -77,7 +76,7 @@ public class KMLTransformerImplTest {
   private static final String MULTILINESTRING_WKT = "MULTILINESTRING ((1 1, 2 1), (1 2, 0 0))";
 
   private static final String MULTIPOLYGON_WKT =
-      "MULTIPOLYGON (((1 1,2 1,2 2,1 2,1 1)), ((0 0,1 1,2 0,0 ))";
+      "MULTIPOLYGON (((1 1,2 1,2 2,1 2,1 1)), ((0 0,1 1,2 0,0 0)))";
 
   private static final String GEOMETRYCOLLECTION_WKT =
       "GEOMETRYCOLLECTION (" + POINT_WKT + ", " + LINESTRING_WKT + ", " + POLYGON_WKT + ")";
@@ -276,11 +275,10 @@ public class KMLTransformerImplTest {
   public void testTransformMetacardList()
       throws CatalogTransformerException, IOException, XpathException, SAXException {
     List<Metacard> metacardList = new ArrayList<>();
-    metacardList.add(createCustomMockMetacard("UUID-1", "ASU Campus",
-        "POINT (-111.9281 33.4242)"));
+    metacardList.add(createCustomMockMetacard("UUID-1", "ASU Campus", "POINT (-111.9281 33.4242)"));
 
-    metacardList.add(createCustomMockMetacard("UUID-2", "Cardinals Stadium",
-        "POINT (-112.2626 33.5276)"));
+    metacardList.add(
+        createCustomMockMetacard("UUID-2", "Cardinals Stadium", "POINT (-112.2626 33.5276)"));
 
     Map<String, Serializable> args = new HashMap<>();
     args.put("docName", "KML Metacard Export");
