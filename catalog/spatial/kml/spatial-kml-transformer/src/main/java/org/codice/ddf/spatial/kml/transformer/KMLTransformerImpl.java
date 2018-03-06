@@ -434,10 +434,12 @@ public class KMLTransformerImpl implements KMLTransformer {
             .map(Result::getMetacard)
             .collect(Collectors.toList());
 
-    return getBinaryContent(metacards, arguments);
+    InputStream kmlInputStream = getInputStream(metacards, arguments);
+    LOGGER.trace("EXITING: ResponseQueue transform");
+    return new BinaryContentImpl(kmlInputStream, KML_MIMETYPE);
   }
 
-  private BinaryContent getBinaryContent(
+  private InputStream getInputStream(
       List<Metacard> metacards, Map<String, Serializable> arguments) {
     String docId = UUID.randomUUID().toString();
 
@@ -480,8 +482,8 @@ public class KMLTransformerImpl implements KMLTransformer {
 
     InputStream kmlInputStream =
         new ByteArrayInputStream(transformedKml.getBytes(StandardCharsets.UTF_8));
-    LOGGER.trace("EXITING: ResponseQueue transform");
-    return new BinaryContentImpl(kmlInputStream, KML_MIMETYPE);
+
+    return kmlInputStream;
   }
 
   private String marshalKml(Kml kmlResult) {
@@ -511,8 +513,10 @@ public class KMLTransformerImpl implements KMLTransformer {
       throw new CatalogTransformerException("List of Metacards cannot be null");
     }
 
-    return Collections.singletonList(
-        getBinaryContent(metacards, (Map<String, Serializable>) arguments));
+    InputStream inputStream = getInputStream(metacards, (Map<String, Serializable>) arguments);
+    BinaryContent bc = new BinaryContentImpl(inputStream, KML_MIMETYPE);
+
+    return Collections.singletonList(bc);
   }
 
   @Override
@@ -528,5 +532,11 @@ public class KMLTransformerImpl implements KMLTransformer {
   @Override
   public Map<String, Object> getProperties() {
     return Collections.emptyMap();
+  }
+
+  public InputStream transformToInputStream(
+      List<Metacard> metacards, Map<String, ? extends Serializable> arguments) {
+
+    return getInputStream(metacards, (Map<String, Serializable>) arguments);
   }
 }
