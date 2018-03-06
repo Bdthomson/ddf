@@ -440,6 +440,7 @@ public class KMLTransformerImpl implements KMLTransformer {
     String docId = UUID.randomUUID().toString();
 
     String restUriAbsolutePath = (String) arguments.get("url");
+    String docNameArgument = (String) arguments.get("docName");
     LOGGER.debug("rest string url arg: {}", restUriAbsolutePath);
 
     // Transform Metacards to KML
@@ -466,11 +467,15 @@ public class KMLTransformerImpl implements KMLTransformer {
       kmlDoc.getStyleSelector().addAll(defaultStyle);
     }
 
+    final String documentName = StringUtils.isNotBlank(docNameArgument)
+        ? docNameArgument
+        : (KML_RESPONSE_QUEUE_PREFIX + kmlDoc.getFeature().size() + CLOSE_PARENTHESIS);
+
     Kml kmlResult =
         encloseKml(
             kmlDoc,
             docId,
-            KML_RESPONSE_QUEUE_PREFIX + kmlDoc.getFeature().size() + CLOSE_PARENTHESIS);
+            documentName);
 
     String transformedKml = marshalKml(kmlResult);
 
@@ -506,7 +511,8 @@ public class KMLTransformerImpl implements KMLTransformer {
       throw new CatalogTransformerException("List of Metacards cannot be null");
     }
 
-    return Collections.singletonList(getBinaryContent(metacards, Collections.emptyMap()));
+    return Collections.singletonList(getBinaryContent(metacards,
+        (Map<String, Serializable>) arguments));
   }
 
   @Override
