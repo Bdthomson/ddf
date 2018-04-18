@@ -80,7 +80,7 @@ define([
         },
         determineContent: function () {
             var activeTab = this.model.getActiveView();
-            this.tabsContent.show(new activeTab());
+            this.tabsContent.show(new activeTab({ selectionInterface: this.options.selectionInterface }));
         },
         showActiveDropdownTab: function(){
             var hasActiveTab = this.$el.find('> .tabs-list .tabs-dropdown .tabs-title.is-active.is-merged').length !== 0;

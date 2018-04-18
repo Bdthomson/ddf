@@ -281,6 +281,11 @@
             <artifactId>action-core-impl</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.platform.util</groupId>
+            <artifactId>util-uuidgenerator-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -348,7 +353,9 @@
                             !org.abego.treelayout.*,
                             *
                         </Import-Package>
-                        <Export-Package/>
+                        <Export-Package>
+                            org.codice.ddf.catalog.ui.metacard
+                        </Export-Package>
                     </instructions>
                 </configuration>
             </plugin>
@@ -385,7 +392,7 @@
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.33</minimum>
+                                            <minimum>0.32</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

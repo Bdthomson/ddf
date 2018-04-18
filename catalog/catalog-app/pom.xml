@@ -623,5 +623,10 @@
             <artifactId>catalog-transformer-preview</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ddf.catalog.transformer</groupId>
+            <artifactId>propertyjson-input-transformer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
