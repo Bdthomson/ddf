@@ -13,6 +13,8 @@
  */
 package org.codice.ddf.spatial.kml.transformer;
 
+import static java.util.Collections.emptyList;
+
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Template;
 import com.github.jknack.handlebars.io.ClassPathTemplateLoader;
@@ -32,6 +34,7 @@ import ddf.catalog.operation.SourceResponse;
 import ddf.catalog.transform.CatalogTransformerException;
 import de.micromata.opengis.kml.v_2_2_0.Coordinate;
 import de.micromata.opengis.kml.v_2_2_0.Document;
+import de.micromata.opengis.kml.v_2_2_0.Feature;
 import de.micromata.opengis.kml.v_2_2_0.Geometry;
 import de.micromata.opengis.kml.v_2_2_0.Kml;
 import de.micromata.opengis.kml.v_2_2_0.KmlFactory;
@@ -43,16 +46,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.io.StringWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -60,15 +59,8 @@ import java.util.UUID;
 import javax.activation.MimeType;
 import javax.activation.MimeTypeParseException;
 import javax.security.auth.Subject;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import org.apache.commons.lang3.StringUtils;
+import org.codice.ddf.spatial.kml.util.KmlMarshaller;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,11 +75,7 @@ import org.slf4j.LoggerFactory;
  */
 public class KMLTransformerImpl implements KMLTransformer {
 
-  private static final String UTF_8 = "UTF-8";
-
   private static final String KML_RESPONSE_QUEUE_PREFIX = "Results (";
-
-  private static final String SERVICES_REST = "/services/catalog/";
 
   private static final String CLOSE_PARENTHESIS = ")";
 
@@ -107,7 +95,7 @@ public class KMLTransformerImpl implements KMLTransformer {
 
   protected static final MimeType KML_MIMETYPE = new MimeType();
 
-  private static List<StyleSelector> defaultStyle = new ArrayList<StyleSelector>();
+  private List<StyleSelector> defaultStyle;
 
   static {
     try {
@@ -120,13 +108,13 @@ public class KMLTransformerImpl implements KMLTransformer {
 
   protected BundleContext context;
 
-  private JAXBContext jaxbContext;
-
   private ClassPathTemplateLoader templateLoader;
 
   private KmlStyleMap styleMapper;
 
   private DescriptionTemplateHelper templateHelper;
+
+  private KmlMarshaller kmlMarshaller = new KmlMarshaller();
 
   public KMLTransformerImpl(
       BundleContext bundleContext,
@@ -137,34 +125,16 @@ public class KMLTransformerImpl implements KMLTransformer {
     this.styleMapper = mapper;
     this.templateHelper = new DescriptionTemplateHelper(actionProvider);
 
-    URL stylingUrl = context.getBundle().getResource(defaultStylingName);
-
-    Unmarshaller unmarshaller = null;
-    try {
-      this.jaxbContext = JAXBContext.newInstance(Kml.class);
-      unmarshaller = jaxbContext.createUnmarshaller();
-    } catch (JAXBException e) {
-      LOGGER.info("Unable to create JAXB Context.  Setting to null.");
-      this.jaxbContext = null;
-    }
+    final URL stylingUrl = context.getBundle().getResource(defaultStylingName);
 
     try {
-      if (unmarshaller != null) {
-        LOGGER.debug("Reading in KML Style");
-        XMLInputFactory xmlInputFactory = XMLInputFactory.newFactory();
-        xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
-        xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
-        xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, false);
-        XMLStreamReader xmlStreamReader =
-            xmlInputFactory.createXMLStreamReader(stylingUrl.openStream());
-        JAXBElement<Kml> jaxbKmlStyle = unmarshaller.unmarshal(xmlStreamReader, Kml.class);
-        Kml kml = jaxbKmlStyle.getValue();
-        if (kml.getFeature() != null) {
-          defaultStyle.addAll(kml.getFeature().getStyleSelector());
-        }
-      }
-    } catch (JAXBException | XMLStreamException e) {
-      LOGGER.debug("Exception while unmarshalling default style resource.", e);
+      LOGGER.debug("Reading in KML Style");
+      defaultStyle =
+          kmlMarshaller
+              .unmarshal(stylingUrl.openStream())
+              .map(Kml::getFeature)
+              .map(Feature::getStyleSelector)
+              .orElse(emptyList());
     } catch (IOException e) {
       LOGGER.debug("Exception while opening default style resource.", e);
     }
@@ -233,34 +203,7 @@ public class KMLTransformerImpl implements KMLTransformer {
   @Override
   public Placemark transformEntry(Subject user, Metacard entry, Map<String, Serializable> arguments)
       throws CatalogTransformerException {
-    String urlToMetacard = null;
-
-    if (arguments == null) {
-      arguments = new HashMap<String, Serializable>();
-    }
-
-    String incomingRestUriAbsolutePathString = (String) arguments.get("url");
-    if (incomingRestUriAbsolutePathString != null) {
-      try {
-        URI incomingRestUri = new URI(incomingRestUriAbsolutePathString);
-        URI officialRestUri =
-            new URI(
-                incomingRestUri.getScheme(),
-                null,
-                incomingRestUri.getHost(),
-                incomingRestUri.getPort(),
-                SERVICES_REST + "/" + entry.getId(),
-                null,
-                null);
-        urlToMetacard = officialRestUri.toString();
-      } catch (URISyntaxException e) {
-        LOGGER.info("bad url passed in, using request url for kml href.", e);
-        urlToMetacard = incomingRestUriAbsolutePathString;
-      }
-      LOGGER.debug("REST URL: {}", urlToMetacard);
-    }
-
-    return performDefaultTransformation(entry, incomingRestUriAbsolutePathString);
+    return performDefaultTransformation(entry);
   }
 
   /**
@@ -272,7 +215,7 @@ public class KMLTransformerImpl implements KMLTransformer {
    * @return
    * @throws javax.xml.transform.TransformerException
    */
-  protected Placemark performDefaultTransformation(Metacard entry, String url)
+  protected Placemark performDefaultTransformation(Metacard entry)
       throws CatalogTransformerException {
 
     // wrap metacard to work around classLoader/reflection issues
@@ -283,7 +226,7 @@ public class KMLTransformerImpl implements KMLTransformer {
 
     DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
-    String effectiveTime = null;
+    String effectiveTime;
     if (entry.getEffectiveDate() == null) {
       effectiveTime = dateFormat.format(new Date());
     } else {
@@ -332,7 +275,7 @@ public class KMLTransformerImpl implements KMLTransformer {
 
   private Geometry createKmlGeo(com.vividsolutions.jts.geom.Geometry geo)
       throws CatalogTransformerException {
-    Geometry kmlGeo = null;
+    Geometry kmlGeo;
     if (POINT_TYPE.equals(geo.getGeometryType())) {
       Point jtsPoint = (Point) geo;
       kmlGeo = KmlFactory.createPoint().addToCoordinates(jtsPoint.getX(), jtsPoint.getY());
@@ -355,7 +298,7 @@ public class KMLTransformerImpl implements KMLTransformer {
       }
       kmlGeo = kmlPoly;
     } else if (geo instanceof GeometryCollection) {
-      List<Geometry> geos = new ArrayList<Geometry>();
+      List<Geometry> geos = new ArrayList<>();
       for (int xx = 0; xx < geo.getNumGeometries(); xx++) {
         geos.add(createKmlGeo(geo.getGeometryN(xx)));
       }
@@ -400,7 +343,7 @@ public class KMLTransformerImpl implements KMLTransformer {
       }
       Kml kml = KmlFactory.createKml().withFeature(placemark);
 
-      String transformedKmlString = marshalKml(kml);
+      String transformedKmlString = kmlMarshaller.marshal(kml);
 
       InputStream kmlInputStream =
           new ByteArrayInputStream(transformedKmlString.getBytes(StandardCharsets.UTF_8));
@@ -456,30 +399,11 @@ public class KMLTransformerImpl implements KMLTransformer {
             docId,
             KML_RESPONSE_QUEUE_PREFIX + kmlDoc.getFeature().size() + CLOSE_PARENTHESIS);
 
-    String transformedKml = marshalKml(kmlResult);
+    String transformedKml = kmlMarshaller.marshal(kmlResult);
 
     InputStream kmlInputStream =
         new ByteArrayInputStream(transformedKml.getBytes(StandardCharsets.UTF_8));
     LOGGER.trace("EXITING: ResponseQueue transform");
     return new BinaryContentImpl(kmlInputStream, KML_MIMETYPE);
-  }
-
-  private String marshalKml(Kml kmlResult) {
-
-    String kmlResultString = null;
-    StringWriter writer = new StringWriter();
-
-    try {
-      Marshaller marshaller = jaxbContext.createMarshaller();
-      marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.FALSE);
-      marshaller.setProperty(Marshaller.JAXB_ENCODING, UTF_8);
-      marshaller.marshal(kmlResult, writer);
-    } catch (JAXBException e) {
-      LOGGER.debug("Failed to marshal KML: ", e);
-    }
-
-    kmlResultString = writer.toString();
-
-    return kmlResultString;
   }
 }
