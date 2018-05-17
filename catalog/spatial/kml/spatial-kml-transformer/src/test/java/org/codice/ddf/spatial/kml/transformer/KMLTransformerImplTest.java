@@ -13,11 +13,17 @@
  */
 package org.codice.ddf.spatial.kml.transformer;
 
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +31,9 @@ import ddf.action.Action;
 import ddf.action.ActionProvider;
 import ddf.catalog.data.BinaryContent;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.Result;
 import ddf.catalog.data.impl.MetacardImpl;
+import ddf.catalog.operation.impl.SourceResponseImpl;
 import ddf.catalog.transform.CatalogTransformerException;
 import de.micromata.opengis.kml.v_2_2_0.LineString;
 import de.micromata.opengis.kml.v_2_2_0.MultiGeometry;
@@ -35,14 +43,21 @@ import de.micromata.opengis.kml.v_2_2_0.Polygon;
 import de.micromata.opengis.kml.v_2_2_0.TimeSpan;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
 import org.apache.commons.io.IOUtils;
+import org.custommonkey.xmlunit.NamespaceContext;
+import org.custommonkey.xmlunit.SimpleNamespaceContext;
+import org.custommonkey.xmlunit.XMLUnit;
+import org.custommonkey.xmlunit.exceptions.XpathException;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.xml.sax.SAXException;
 
 public class KMLTransformerImplTest {
 
@@ -94,17 +109,24 @@ public class KMLTransformerImplTest {
             mockContext, DEFAULT_STYLE_LOCATION, new KmlStyleMap(), mockActionProvider);
   }
 
+  @Before
+  public void setupXpath() {
+    NamespaceContext ctx =
+        new SimpleNamespaceContext(singletonMap("m", "http://www.opengis.net/kml/2.2"));
+    XMLUnit.setXpathNamespaceContext(ctx);
+  }
+
   @Test(expected = CatalogTransformerException.class)
   public void testPerformDefaultTransformationNoLocation() throws CatalogTransformerException {
     Metacard metacard = createMockMetacard();
-    kmlTransformer.performDefaultTransformation(metacard, null);
+    kmlTransformer.performDefaultTransformation(metacard);
   }
 
   @Test
   public void testPerformDefaultTransformationPointLocation() throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(POINT_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getStyleSelector().isEmpty(), is(true));
@@ -120,7 +142,7 @@ public class KMLTransformerImplTest {
       throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(LINESTRING_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getTimePrimitive(), instanceOf(TimeSpan.class));
@@ -137,7 +159,7 @@ public class KMLTransformerImplTest {
   public void testPerformDefaultTransformationPolygonLocation() throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(POLYGON_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getTimePrimitive(), instanceOf(TimeSpan.class));
@@ -155,7 +177,7 @@ public class KMLTransformerImplTest {
       throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(MULTIPOINT_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getTimePrimitive(), instanceOf(TimeSpan.class));
@@ -178,7 +200,7 @@ public class KMLTransformerImplTest {
       throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(MULTILINESTRING_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getTimePrimitive(), instanceOf(TimeSpan.class));
@@ -200,7 +222,7 @@ public class KMLTransformerImplTest {
       throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(MULTIPOLYGON_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getTimePrimitive(), instanceOf(TimeSpan.class));
@@ -222,7 +244,7 @@ public class KMLTransformerImplTest {
       throws CatalogTransformerException {
     MetacardImpl metacard = createMockMetacard();
     metacard.setLocation(GEOMETRYCOLLECTION_WKT);
-    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard, null);
+    Placemark placemark = kmlTransformer.performDefaultTransformation(metacard);
     assertThat(placemark.getId(), is("Placemark-" + ID));
     assertThat(placemark.getName(), is(TITLE));
     assertThat(placemark.getTimePrimitive(), instanceOf(TimeSpan.class));
@@ -247,7 +269,27 @@ public class KMLTransformerImplTest {
     metacard.setLocation(POINT_WKT);
     BinaryContent content = kmlTransformer.transform(metacard, null);
     assertThat(content.getMimeTypeValue(), is(KMLTransformerImpl.KML_MIMETYPE.toString()));
-    IOUtils.toString(content.getInputStream());
+    IOUtils.toString(content.getInputStream(), StandardCharsets.UTF_8);
+  }
+
+  @Test
+  public void testTransformMetacardFromUpstreamResponse()
+      throws CatalogTransformerException, IOException, XpathException, SAXException {
+
+    MetacardImpl metacard = createMockMetacard();
+    metacard.setLocation(POINT_WKT);
+
+    Result result = mock(Result.class);
+    doReturn(metacard).when(result).getMetacard();
+
+    SourceResponseImpl sourceResponse = new SourceResponseImpl(null, singletonList(result));
+    BinaryContent content = kmlTransformer.transform(sourceResponse, emptyMap());
+    assertThat(content.getMimeTypeValue(), is(KMLTransformerImpl.KML_MIMETYPE.toString()));
+    final String kmlString = IOUtils.toString(content.getInputStream(), StandardCharsets.UTF_8);
+
+    assertXpathEvaluatesTo("Results (1)", "/m:kml/m:Document/m:name", kmlString);
+    assertXpathExists("//m:Placemark[@id='Placemark-1234567890']", kmlString);
+    assertXpathEvaluatesTo("myTitle", "//m:Placemark/m:name", kmlString);
   }
 
   private MetacardImpl createMockMetacard() {
