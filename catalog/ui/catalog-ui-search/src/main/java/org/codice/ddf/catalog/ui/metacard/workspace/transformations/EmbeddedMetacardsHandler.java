@@ -19,6 +19,7 @@ import ddf.catalog.data.impl.MetacardImpl;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.codice.ddf.catalog.ui.metacard.workspace.ListMetacardImpl;
 import org.codice.ddf.catalog.ui.metacard.workspace.QueryMetacardImpl;
@@ -39,9 +40,19 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
 
   private final MetacardType metacardType;
 
+  private Function<Map<String, Object>, Map<String, Object>> attributeMapper;
+
   public EmbeddedMetacardsHandler(String key, MetacardType metacardType) {
+    this(key, metacardType, Function.identity());
+  }
+
+  public EmbeddedMetacardsHandler(
+      String key,
+      MetacardType metacardType,
+      Function<Map<String, Object>, Map<String, Object>> attributeMapper) {
     this.key = key;
     this.metacardType = metacardType;
+    this.attributeMapper = attributeMapper;
   }
 
   // The following static factory methods are used for OSGi blueprint factory methods.
@@ -51,8 +62,20 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
   }
 
   public static EmbeddedMetacardsHandler newListMetacardHandler() {
-    return new EmbeddedMetacardsHandler(WorkspaceAttributes.WORKSPACE_LISTS, ListMetacardImpl.TYPE);
+    return new EmbeddedMetacardsHandler(
+        WorkspaceAttributes.WORKSPACE_LISTS, ListMetacardImpl.TYPE, EmbeddedMetacardsHandler::ret);
   }
+
+  private static Map<String, Object> ret(Map<String, Object> m) {
+
+    m.entrySet().iterator().stream().
+
+    return m.
+    // TODO: Return new map.
+    return null
+  }
+
+  //      EXTERNAL_LIST_ATTRIBUTES.forEach(listAsMap::remove);
 
   @Override
   public String getKey() {
@@ -90,6 +113,7 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
             .stream()
             .filter(Map.class::isInstance)
             .map(Map.class::cast)
+            .map(attributeMapper)
             .map(
                 queryJson -> {
                   final Metacard metacard = new MetacardImpl(metacardType);

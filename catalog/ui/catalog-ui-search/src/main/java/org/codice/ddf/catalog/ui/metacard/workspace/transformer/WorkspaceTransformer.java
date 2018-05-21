@@ -13,6 +13,10 @@
  */
 package org.codice.ddf.catalog.ui.metacard.workspace.transformer;
 
+import static java.util.stream.Collectors.toList;
+
+import com.google.common.collect.Sets;
+import ddf.action.ActionRegistry;
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
@@ -27,13 +31,16 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.apache.commons.io.IOUtils;
+import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
 import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl;
 import org.codice.ddf.catalog.ui.util.EndpointUtil;
 import org.slf4j.Logger;
@@ -41,6 +48,10 @@ import org.slf4j.LoggerFactory;
 
 public class WorkspaceTransformer {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceTransformer.class);
+
+  private static final String ACTIONS_KEY = "actions";
+
+  private static final Set<String> EXTERNAL_LIST_ATTRIBUTES = Sets.newHashSet(ACTIONS_KEY);
 
   private final CatalogFramework catalogFramework;
 
@@ -50,15 +61,19 @@ public class WorkspaceTransformer {
 
   private final List<WorkspaceTransformation> transformations;
 
+  private final ActionRegistry actionRegistry;
+
   public WorkspaceTransformer(
       CatalogFramework catalogFramework,
       InputTransformer inputTransformer,
       EndpointUtil endpointUtil,
-      List<WorkspaceTransformation> transformations) {
+      List<WorkspaceTransformation> transformations,
+      ActionRegistry actionRegistry) {
     this.catalogFramework = catalogFramework;
     this.inputTransformer = inputTransformer;
     this.endpointUtil = endpointUtil;
     this.transformations = transformations;
+    this.actionRegistry = actionRegistry;
   }
 
   private Optional<Map.Entry<String, Object>> metacardEntryToJsonEntry(
@@ -180,7 +195,7 @@ public class WorkspaceTransformer {
   }
 
   public List<Map<String, Object>> transform(List<Metacard> metacards) {
-    return metacards.stream().map(this::transform).collect(Collectors.toList());
+    return metacards.stream().map(this::transform).collect(toList());
   }
 
   public String metacardToXml(Metacard metacard) {
@@ -197,5 +212,35 @@ public class WorkspaceTransformer {
     } catch (IOException | CatalogTransformerException ex) {
       throw new WorkspaceTransformException(ex);
     }
+  }
+
+  public void addListActions(Metacard workspaceMetacard, Map<String, Object> workspaceAsMap) {
+    final List<Map<String, Object>> listActions = getListActions(workspaceMetacard);
+    final List<Map<String, Object>> lists =
+        (List<Map<String, Object>>) workspaceAsMap.get(WorkspaceAttributes.WORKSPACE_LISTS);
+    if (lists != null) {
+      lists.forEach(list -> list.put(ACTIONS_KEY, listActions));
+    }
+  }
+
+  private List<Map<String, Object>> getListActions(Metacard workspaceMetacard) {
+    return actionRegistry
+        .list(workspaceMetacard)
+        .stream()
+        .filter(action -> action.getId().startsWith("catalog.data.metacard.list"))
+        .map(
+            action -> {
+              final Map<String, Object> actionMap = new HashMap<>();
+              actionMap.put("id", action.getId());
+              actionMap.put("url", action.getUrl());
+              actionMap.put("title", action.getTitle());
+              actionMap.put("description", action.getDescription());
+              return actionMap;
+            })
+        .collect(toList());
+  }
+
+  private void removeExternalListAttributes(Map<String, Object> listAsMap) {
+    EXTERNAL_LIST_ATTRIBUTES.forEach(listAsMap::remove);
   }
 }
