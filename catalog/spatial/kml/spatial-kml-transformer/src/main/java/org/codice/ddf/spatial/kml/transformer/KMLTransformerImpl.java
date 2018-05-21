@@ -15,6 +15,7 @@ package org.codice.ddf.spatial.kml.transformer;
 
 import static java.util.Collections.emptyList;
 import static org.codice.ddf.spatial.kml.converter.MetacardToKml.getKmlGeoFromWkt;
+import static org.codice.ddf.spatial.kml.util.KmlTransformations.encloseKml;
 
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Template;
@@ -32,7 +33,6 @@ import de.micromata.opengis.kml.v_2_2_0.Feature;
 import de.micromata.opengis.kml.v_2_2_0.Kml;
 import de.micromata.opengis.kml.v_2_2_0.KmlFactory;
 import de.micromata.opengis.kml.v_2_2_0.Placemark;
-import de.micromata.opengis.kml.v_2_2_0.Style;
 import de.micromata.opengis.kml.v_2_2_0.StyleSelector;
 import de.micromata.opengis.kml.v_2_2_0.TimeSpan;
 import java.io.ByteArrayInputStream;
@@ -128,51 +128,6 @@ public class KMLTransformerImpl implements KMLTransformer {
     templateLoader = new ClassPathTemplateLoader();
     templateLoader.setPrefix(TEMPLATE_DIRECTORY);
     templateLoader.setSuffix(TEMPLATE_SUFFIX);
-  }
-
-  /**
-   * Encapsulate the kml content (placemarks, etc.) with a style in a KML Document element If either
-   * content or style are null, they will be in the resulting Document
-   *
-   * @param kml
-   * @param style
-   * @param documentId which should be the metacard id
-   * @return KML DocumentType element with style and content
-   */
-  public static Document encloseDoc(
-      Placemark placemark, Style style, String documentId, String docName)
-      throws IllegalArgumentException {
-    Document document = KmlFactory.createDocument();
-    document.setId(documentId);
-    document.setOpen(true);
-    document.setName(docName);
-
-    if (style != null) {
-      document.getStyleSelector().add(style);
-    }
-    if (placemark != null) {
-      document.getFeature().add(placemark);
-    }
-
-    return document;
-  }
-
-  /**
-   * Wrap KML document with the opening and closing kml tags
-   *
-   * @param document
-   * @param folderId which should be the subscription id if it exists
-   * @return completed KML
-   */
-  public static Kml encloseKml(Document doc, String docId, String docName) {
-    Kml kml = KmlFactory.createKml();
-    if (doc != null) {
-      kml.setFeature(doc);
-      doc.setId(docId); // Id should be subscription id
-      doc.setName(docName);
-      doc.setOpen(false);
-    }
-    return kml;
   }
 
   /**
