@@ -26,6 +26,13 @@ public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
     this.actionRegistry = actionRegistry;
   }
 
+  /**
+   * Add "actions" key to list metacard.
+   *
+   * @param metacard
+   * @param workspaceAsMap
+   * @return
+   */
   @Override
   protected Map<String, Object> metacardToJsonMapper(
       Metacard metacard, Map<String, Object> workspaceAsMap) {
@@ -40,6 +47,12 @@ public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
     return workspaceAsMap;
   }
 
+  /**
+   * Remove "actions" key from list metacard map.
+   *
+   * @param map
+   * @return
+   */
   @Override
   protected Map<String, Object> jsonToMetacardMapper(Map<String, Object> map) {
     return map.entrySet()
