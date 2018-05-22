@@ -423,9 +423,8 @@ public class MetacardApplication implements SparkApplication {
           boolean isSubscribed =
               !isEmpty(email) && subscriptions.getEmails(metacard.getId()).contains(email);
 
-          Map<String, Object> workspaceAsMap = transformer.transform(metacard);
           return ImmutableMap.builder()
-              .putAll(workspaceAsMap)
+              .putAll(transformer.transform(metacard))
               .put("subscribed", isSubscribed)
               .build();
         },
@@ -451,9 +450,8 @@ public class MetacardApplication implements SparkApplication {
                   metacard -> {
                     boolean isSubscribed = ids.contains(metacard.getId());
                     try {
-                      Map<String, Object> workspaceAsMap = transformer.transform(metacard);
                       return ImmutableMap.builder()
-                          .putAll(workspaceAsMap)
+                          .putAll(transformer.transform(metacard))
                           .put("subscribed", isSubscribed)
                           .build();
                     } catch (RuntimeException e) {
@@ -478,6 +476,7 @@ public class MetacardApplication implements SparkApplication {
               JsonFactory.create().parser().parseMap(util.safeGetBody(req));
           Metacard saved = saveMetacard(transformer.transform(incoming));
           Map<String, Object> response = transformer.transform(saved);
+
           res.status(201);
           return util.getJson(response);
         });
@@ -526,8 +525,7 @@ public class MetacardApplication implements SparkApplication {
           metacard.setAttribute(new AttributeImpl(Metacard.ID, id));
 
           Metacard updated = updateMetacard(id, metacard);
-          Map<String, Object> response = transformer.transform(updated);
-          return util.getJson(response);
+          return util.getJson(transformer.transform(updated));
         });
 
     delete(

@@ -30,7 +30,7 @@ import org.codice.ddf.configuration.SystemBaseUrl;
 
 public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
 
-  public static final String ACTIONS_KEY = "actions";
+  private static final String ACTIONS_KEY = "actions";
 
   private static final Set<String> EXTERNAL_LIST_ATTRIBUTES = Sets.newHashSet(ACTIONS_KEY);
   private final ActionRegistry actionRegistry;
@@ -40,13 +40,7 @@ public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
     this.actionRegistry = actionRegistry;
   }
 
-  /**
-   * Add "actions" key to list metacards.
-   *
-   * @param workspaceMetacard
-   * @param workspaceAsMap
-   * @return
-   */
+  // Add "actions" key to list metacards.
   @Override
   public Optional<List> metacardValueToJsonValue(
       WorkspaceTransformer transformer, List metacardXMLStrings, Metacard workspaceMetacard) {
@@ -67,13 +61,7 @@ public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
     return listMetacardOptional;
   }
 
-  /**
-   * Remove "actions" key from list metacard map.
-   *
-   * @param transformer
-   * @param metacardJsonData
-   * @return
-   */
+  // Remove "actions" key from list metacard map.
   @Override
   public Optional<List> jsonValueToMetacardValue(
       WorkspaceTransformer transformer, List metacardJsonData) {

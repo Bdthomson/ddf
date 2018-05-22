@@ -88,7 +88,7 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
             .map(
                 queryJson -> {
                   final Metacard metacard = new MetacardImpl(metacardType);
-                  transformer.transformIntoMetacard(queryJson, metacard);
+                  transformer.transformIntoMetacard((Map<String, Object>) queryJson, metacard);
                   return metacard;
                 })
             .map(transformer::metacardToXml)
