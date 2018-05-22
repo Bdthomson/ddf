@@ -50,6 +50,7 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
         WorkspaceAttributes.WORKSPACE_QUERIES, QueryMetacardImpl.TYPE);
   }
 
+  // TODO: comment this out?
   public static EmbeddedMetacardsHandler newListMetacardHandler() {
     return new EmbeddedMetacardsHandler(WorkspaceAttributes.WORKSPACE_LISTS, ListMetacardImpl.TYPE);
   }

@@ -13,6 +13,7 @@
  */
 package org.codice.ddf.catalog.ui.metacard.workspace.transformer;
 
+import ddf.action.ActionRegistry;
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
