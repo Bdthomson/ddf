@@ -81,7 +81,7 @@ public class WorkspaceTransformerTest {
 
     doReturn(emptyList()).when(actionRegistry).list(any());
 
-    wt = new WorkspaceTransformer(cf, it, ut, actionRegistry);
+    wt = new WorkspaceTransformer(cf, it, ut);
   }
 
   // test metacard -> map
