@@ -69,28 +69,12 @@ public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
   @Override
   public Optional<List> jsonValueToMetacardValue(
       WorkspaceTransformer transformer, List metacardJsonData) {
-    //
 
-    //    ((List<Object>) metacardJsonData)
-    //        .stream()
-    //        .filter(Map.class::isInstance)
-    //        .map(Map.class::cast)
-    //        .map(m -> m.get)
-    ////        .filter(entry -> entry.getKey)
-    ////        .map(
-    ////            queryJson -> {
-    ////              final Metacard metacard = new MetacardImpl(metacardType);
-    ////              transformer.transformIntoMetacard(queryJson, metacard);
-    ////              return metacard;
-    ////            })
-    ////        .map(transformer::metacardToXml)
-    ////        .collect(Collectors.toList()));
-    //
-    //
-    //    return map.entrySet()
-    //        .stream()
-    //        .filter(entry -> !EXTERNAL_LIST_ATTRIBUTES.contains(entry.getKey()))
-    //        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    ((List<Object>) metacardJsonData)
+        .stream()
+        .filter(Map.class::isInstance)
+        .map(Map.class::cast)
+        .forEach(map -> EXTERNAL_LIST_ATTRIBUTES.forEach(map::remove));
 
     return super.jsonValueToMetacardValue(transformer, metacardJsonData);
   }

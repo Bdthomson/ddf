@@ -13,8 +13,6 @@
  */
 package org.codice.ddf.catalog.ui.metacard.workspace.transformer;
 
-import static java.util.stream.Collectors.toList;
-
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
@@ -167,7 +165,7 @@ public class WorkspaceTransformer {
     }
   }
 
-  public Map<String, Object> transform(Metacard metacard) {
+  public Map<String, Object> transform(Metacard workspaceMetacard, Metacard metacard) {
     return Optional.of(metacard)
         .map(Metacard::getMetacardType)
         .map(MetacardType::getAttributeDescriptors)
@@ -175,7 +173,7 @@ public class WorkspaceTransformer {
         .stream()
         .map(descriptor -> getEntryFromDescriptor(metacard, descriptor))
         .filter(Objects::nonNull)
-        .map(entry -> this.metacardEntryToJsonEntry(entry, metacard))
+        .map(entry -> this.metacardEntryToJsonEntry(entry, workspaceMetacard))
         .filter(Optional::isPresent)
         .map(Optional::get)
         .filter(entry -> entry.getKey() != null)
@@ -183,8 +181,12 @@ public class WorkspaceTransformer {
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (left, right) -> left));
   }
 
+  public Map<String, Object> transform(Metacard workspaceMetacard) {
+    return transform(workspaceMetacard, workspaceMetacard);
+  }
+
   public List<Map<String, Object>> transform(List<Metacard> metacards) {
-    return metacards.stream().map(this::transform).collect(toList());
+    return metacards.stream().map(this::transform).collect(Collectors.toList());
   }
 
   public String metacardToXml(Metacard metacard) {
