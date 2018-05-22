@@ -15,8 +15,6 @@ package org.codice.ddf.catalog.ui.metacard.workspace.transformer;
 
 import static java.util.stream.Collectors.toList;
 
-import com.google.common.collect.Sets;
-import ddf.action.ActionRegistry;
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Attribute;
 import ddf.catalog.data.AttributeDescriptor;
@@ -31,16 +29,13 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.apache.commons.io.IOUtils;
-import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
 import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl;
 import org.codice.ddf.catalog.ui.util.EndpointUtil;
 import org.slf4j.Logger;
