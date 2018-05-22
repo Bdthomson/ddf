@@ -49,10 +49,6 @@ import org.slf4j.LoggerFactory;
 public class WorkspaceTransformer {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceTransformer.class);
 
-  private static final String ACTIONS_KEY = "actions";
-
-  private static final Set<String> EXTERNAL_LIST_ATTRIBUTES = Sets.newHashSet(ACTIONS_KEY);
-
   private final CatalogFramework catalogFramework;
 
   private final InputTransformer inputTransformer;
@@ -61,19 +57,15 @@ public class WorkspaceTransformer {
 
   private final List<WorkspaceTransformation> transformations;
 
-  private final ActionRegistry actionRegistry;
-
   public WorkspaceTransformer(
       CatalogFramework catalogFramework,
       InputTransformer inputTransformer,
       EndpointUtil endpointUtil,
-      List<WorkspaceTransformation> transformations,
-      ActionRegistry actionRegistry) {
+      List<WorkspaceTransformation> transformations) {
     this.catalogFramework = catalogFramework;
     this.inputTransformer = inputTransformer;
     this.endpointUtil = endpointUtil;
     this.transformations = transformations;
-    this.actionRegistry = actionRegistry;
   }
 
   private Optional<Map.Entry<String, Object>> metacardEntryToJsonEntry(
@@ -212,35 +204,5 @@ public class WorkspaceTransformer {
     } catch (IOException | CatalogTransformerException ex) {
       throw new WorkspaceTransformException(ex);
     }
-  }
-
-  public void addListActions(Metacard workspaceMetacard, Map<String, Object> workspaceAsMap) {
-    final List<Map<String, Object>> listActions = getListActions(workspaceMetacard);
-    final List<Map<String, Object>> lists =
-        (List<Map<String, Object>>) workspaceAsMap.get(WorkspaceAttributes.WORKSPACE_LISTS);
-    if (lists != null) {
-      lists.forEach(list -> list.put(ACTIONS_KEY, listActions));
-    }
-  }
-
-  private List<Map<String, Object>> getListActions(Metacard workspaceMetacard) {
-    return actionRegistry
-        .list(workspaceMetacard)
-        .stream()
-        .filter(action -> action.getId().startsWith("catalog.data.metacard.list"))
-        .map(
-            action -> {
-              final Map<String, Object> actionMap = new HashMap<>();
-              actionMap.put("id", action.getId());
-              actionMap.put("url", action.getUrl());
-              actionMap.put("title", action.getTitle());
-              actionMap.put("description", action.getDescription());
-              return actionMap;
-            })
-        .collect(toList());
-  }
-
-  private void removeExternalListAttributes(Map<String, Object> listAsMap) {
-    EXTERNAL_LIST_ATTRIBUTES.forEach(listAsMap::remove);
   }
 }
