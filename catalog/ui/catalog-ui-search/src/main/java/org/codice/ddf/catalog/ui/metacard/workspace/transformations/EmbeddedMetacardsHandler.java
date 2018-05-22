@@ -69,24 +69,14 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
 
   @Override
   public Optional<List> metacardValueToJsonValue(
-      WorkspaceTransformer transformer, List metacardXMLStrings) {
+      WorkspaceTransformer transformer, List metacardXMLStrings, Metacard workspaceMetacard) {
     return Optional.of(
         ((List<Object>) metacardXMLStrings)
             .stream()
             .filter(String.class::isInstance)
             .map(String.class::cast)
             .map(transformer::xmlToMetacard)
-            .map(metacard -> metacardToJsonMapper(metacard, transformer.transform(metacard)))
             .collect(Collectors.toList()));
-  }
-
-  protected Map<String, Object> metacardToJsonMapper(
-      Metacard metacard, Map<String, Object> transform) {
-    return transform;
-  }
-
-  protected Map<String, Object> jsonToMetacardMapper(Map<String, Object> map) {
-    return map;
   }
 
   @Override
@@ -97,7 +87,6 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
             .stream()
             .filter(Map.class::isInstance)
             .map(Map.class::cast)
-            .map(this::jsonToMetacardMapper)
             .map(
                 queryJson -> {
                   final Metacard metacard = new MetacardImpl(metacardType);

@@ -5,13 +5,16 @@ import static java.util.stream.Collectors.toList;
 import com.google.common.collect.Sets;
 import ddf.action.ActionRegistry;
 import ddf.catalog.data.Metacard;
+import ddf.catalog.data.impl.AttributeImpl;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.codice.ddf.catalog.ui.metacard.workspace.ListMetacardImpl;
 import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
+import org.codice.ddf.catalog.ui.metacard.workspace.transformer.WorkspaceTransformer;
 import org.codice.ddf.configuration.SystemBaseUrl;
 
 public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
@@ -27,43 +30,82 @@ public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
   }
 
   /**
-   * Add "actions" key to list metacard.
+   * Add "actions" key to list metacards.
    *
-   * @param metacard
+   * @param workspaceMetacard
    * @param workspaceAsMap
    * @return
    */
   @Override
-  protected Map<String, Object> metacardToJsonMapper(
-      Metacard metacard, Map<String, Object> workspaceAsMap) {
+  public Optional<List> metacardValueToJsonValue(
+      WorkspaceTransformer transformer, List metacardXMLStrings, Metacard workspaceMetacard) {
 
-    final List<Map<String, Object>> listActions = getListActions(metacard);
-    final List<Map<String, Object>> lists =
-        (List<Map<String, Object>>) workspaceAsMap.get(WorkspaceAttributes.WORKSPACE_LISTS);
-    if (lists != null) {
-      lists.forEach(list -> list.put(ACTIONS_KEY, listActions));
-    }
+    final List<Map<String, Object>> listActions = getListActions(workspaceMetacard);
 
-    return workspaceAsMap;
+    final Optional<List> listMetacardOptional =
+        super.metacardValueToJsonValue(transformer, metacardXMLStrings, workspaceMetacard);
+
+    listMetacardOptional.ifPresent(
+        listMetacards ->
+            ((List<Object>) listMetacards)
+                .stream()
+                .filter(Metacard.class::isInstance)
+                .map(Metacard.class::cast)
+                .forEach(
+                    listMetacard ->
+                        listMetacard.setAttribute(
+                            new AttributeImpl(ACTIONS_KEY, (Serializable) listActions))));
+
+    return listMetacardOptional;
   }
 
   /**
-   * Remove "actions" key from list metacard map.
+   * TODO: Remove "actions" key from list metacard map.
    *
-   * @param map
+   * @param transformer
+   * @param metacardJsonData
    * @return
    */
   @Override
-  protected Map<String, Object> jsonToMetacardMapper(Map<String, Object> map) {
-    return map.entrySet()
-        .stream()
-        .filter(entry -> !EXTERNAL_LIST_ATTRIBUTES.contains(entry.getKey()))
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  public Optional<List> jsonValueToMetacardValue(
+      WorkspaceTransformer transformer, List metacardJsonData) {
+    //
+
+    //    ((List<Object>) metacardJsonData)
+    //        .stream()
+    //        .filter(Map.class::isInstance)
+    //        .map(Map.class::cast)
+    //        .map(m -> m.get)
+    ////        .filter(entry -> entry.getKey)
+    ////        .map(
+    ////            queryJson -> {
+    ////              final Metacard metacard = new MetacardImpl(metacardType);
+    ////              transformer.transformIntoMetacard(queryJson, metacard);
+    ////              return metacard;
+    ////            })
+    ////        .map(transformer::metacardToXml)
+    ////        .collect(Collectors.toList()));
+    //
+    //
+    //    return map.entrySet()
+    //        .stream()
+    //        .filter(entry -> !EXTERNAL_LIST_ATTRIBUTES.contains(entry.getKey()))
+    //        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    return super.jsonValueToMetacardValue(transformer, metacardJsonData);
   }
 
+  /**
+   * Given a {@link org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceMetacardImpl}, get a list
+   * of actions that can be executed on a list.
+   *
+   * @param workspaceMetacard
+   * @return
+   */
   private List<Map<String, Object>> getListActions(Metacard workspaceMetacard) {
     final String host =
         SystemBaseUrl.getProtocol() + SystemBaseUrl.getHost() + ":" + SystemBaseUrl.getPort();
+
     return actionRegistry
         .list(workspaceMetacard)
         .stream()
