@@ -14,7 +14,6 @@
 package org.codice.ddf.catalog.ui.metacard;
 
 import static ddf.catalog.util.impl.ResultIterable.resultIterable;
-import static java.util.stream.Collectors.toList;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -34,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSource;
-import ddf.action.ActionRegistry;
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.content.data.ContentItem;
 import ddf.catalog.content.data.impl.ContentItemImpl;
@@ -127,7 +125,6 @@ import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
 import org.codice.ddf.catalog.ui.metacard.workspace.transformer.WorkspaceTransformer;
 import org.codice.ddf.catalog.ui.query.monitor.api.SubscriptionsPersistentStore;
 import org.codice.ddf.catalog.ui.util.EndpointUtil;
-import org.codice.ddf.configuration.SystemBaseUrl;
 import org.codice.ddf.security.common.Security;
 import org.opengis.filter.Filter;
 import org.opengis.filter.sort.SortBy;
@@ -152,8 +149,6 @@ public class MetacardApplication implements SparkApplication {
   private static final String ERROR_RESPONSE_TYPE = "error";
 
   private static final String SUCCESS_RESPONSE_TYPE = "success";
-
-  public static final String ACTIONS_KEY = "actions";
 
   private static final MetacardType SECURITY_ATTRIBUTES = new SecurityAttributes();
   private static int pageSize = 250;
@@ -182,8 +177,6 @@ public class MetacardApplication implements SparkApplication {
 
   private final NoteUtil noteUtil;
 
-  private final ActionRegistry actionRegistry;
-
   public MetacardApplication(
       CatalogFramework catalogFramework,
       FilterBuilder filterBuilder,
@@ -197,8 +190,7 @@ public class MetacardApplication implements SparkApplication {
       QueryResponseTransformer csvQueryResponseTransformer,
       AttributeRegistry attributeRegistry,
       ConfigurationApplication configuration,
-      NoteUtil noteUtil,
-      ActionRegistry actionRegistry) {
+      NoteUtil noteUtil) {
     this.catalogFramework = catalogFramework;
     this.filterBuilder = filterBuilder;
     this.util = endpointUtil;
@@ -212,7 +204,6 @@ public class MetacardApplication implements SparkApplication {
     this.attributeRegistry = attributeRegistry;
     this.configuration = configuration;
     this.noteUtil = noteUtil;
-    this.actionRegistry = actionRegistry;
   }
 
   private String getSubjectEmail() {
@@ -433,7 +424,6 @@ public class MetacardApplication implements SparkApplication {
               !isEmpty(email) && subscriptions.getEmails(metacard.getId()).contains(email);
 
           Map<String, Object> workspaceAsMap = transformer.transform(metacard);
-          addListActions(metacard, workspaceAsMap);
           return ImmutableMap.builder()
               .putAll(workspaceAsMap)
               .put("subscribed", isSubscribed)
@@ -462,7 +452,6 @@ public class MetacardApplication implements SparkApplication {
                     boolean isSubscribed = ids.contains(metacard.getId());
                     try {
                       Map<String, Object> workspaceAsMap = transformer.transform(metacard);
-                      addListActions(metacard, workspaceAsMap);
                       return ImmutableMap.builder()
                           .putAll(workspaceAsMap)
                           .put("subscribed", isSubscribed)
@@ -489,7 +478,6 @@ public class MetacardApplication implements SparkApplication {
               JsonFactory.create().parser().parseMap(util.safeGetBody(req));
           Metacard saved = saveMetacard(transformer.transform(incoming));
           Map<String, Object> response = transformer.transform(saved);
-          addListActions(saved, response);
           res.status(201);
           return util.getJson(response);
         });
@@ -539,7 +527,6 @@ public class MetacardApplication implements SparkApplication {
 
           Metacard updated = updateMetacard(id, metacard);
           Map<String, Object> response = transformer.transform(updated);
-          addListActions(updated, response);
           return util.getJson(response);
         });
 
@@ -1106,6 +1093,4 @@ public class MetacardApplication implements SparkApplication {
       return supplier.get();
     }
   }
-
-
 }

@@ -1,7 +1,6 @@
 package org.codice.ddf.catalog.ui.metacard.workspace.transformations;
 
 import static java.util.stream.Collectors.toList;
-import static org.codice.ddf.catalog.ui.metacard.MetacardApplication.ACTIONS_KEY;
 
 import com.google.common.collect.Sets;
 import ddf.action.ActionRegistry;
@@ -16,6 +15,8 @@ import org.codice.ddf.catalog.ui.metacard.workspace.WorkspaceAttributes;
 import org.codice.ddf.configuration.SystemBaseUrl;
 
 public class EmbeddedListMetacardsHandler extends EmbeddedMetacardsHandler {
+
+  public static final String ACTIONS_KEY = "actions";
 
   private static final Set<String> EXTERNAL_LIST_ATTRIBUTES = Sets.newHashSet(ACTIONS_KEY);
   private final ActionRegistry actionRegistry;
