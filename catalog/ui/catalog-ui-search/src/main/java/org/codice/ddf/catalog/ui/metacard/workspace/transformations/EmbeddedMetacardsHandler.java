@@ -38,9 +38,6 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
 
   private final MetacardType metacardType;
 
-  //  private Function<Map<String, Object>, Map<String, Object>> jsonToMetacardMapper;
-  //  private BiFunction<Metacard, Map<String, Object>, Map<String, Object>> metacardToJsonMapper;
-
   public EmbeddedMetacardsHandler(String key, MetacardType metacardType) {
     this.key = key;
     this.metacardType = metacardType;
@@ -76,6 +73,7 @@ public class EmbeddedMetacardsHandler implements WorkspaceValueTransformation<Li
             .filter(String.class::isInstance)
             .map(String.class::cast)
             .map(transformer::xmlToMetacard)
+            .map(metacard -> transformer.transform(workspaceMetacard, metacard))
             .collect(Collectors.toList()));
   }
 
