@@ -252,6 +252,7 @@ public class EndpointUtil {
         attributeProperties.put("type", descriptor.getType().getAttributeFormat().name());
         attributeProperties.put("multivalued", descriptor.isMultiValued());
         attributeProperties.put("id", descriptor.getName());
+        attributeProperties.put("isInjected", false);
         attributes.put(descriptor.getName(), attributeProperties);
       }
       resultTypes.put(metacardType.getName(), attributes);
@@ -267,17 +268,35 @@ public class EndpointUtil {
       attributeProperties.put("type", descriptor.getType().getAttributeFormat().name());
       attributeProperties.put("multivalued", descriptor.isMultiValued());
       attributeProperties.put("id", descriptor.getName());
+      attributeProperties.put("isInjected", true);
       Set<String> types =
           attribute.metacardTypes().isEmpty() ? resultTypes.keySet() : attribute.metacardTypes();
-      for (String type : types) {
-        Map<String, Object> attributes =
-            (Map) resultTypes.getOrDefault(type, new HashMap<String, Object>());
-        attributes.put(attribute.attribute(), attributeProperties);
-        resultTypes.put(type, attributes);
-      }
+
+      types
+          .stream()
+          .filter(type -> isAttributeMissing(resultTypes, attribute, type))
+          .forEach(
+              type -> {
+                Map<String, Object> attributes =
+                    (Map) resultTypes.getOrDefault(type, new HashMap<String, Object>());
+                attributes.put(attribute.attribute(), attributeProperties);
+                resultTypes.put(type, attributes);
+              });
     }
 
     return resultTypes;
+  }
+
+  @SuppressWarnings("unchecked")
+  private boolean isAttributeMissing(
+      Map<String, Object> resultTypes, InjectableAttribute attribute, String type) {
+    if (!resultTypes.containsKey(type)) {
+      return true;
+    }
+
+    Map<String, Object> attributes = (Map<String, Object>) resultTypes.get(type);
+
+    return !attributes.containsKey(attribute.attribute());
   }
 
   public ArrayList<String> getStringList(List<Serializable> list) {

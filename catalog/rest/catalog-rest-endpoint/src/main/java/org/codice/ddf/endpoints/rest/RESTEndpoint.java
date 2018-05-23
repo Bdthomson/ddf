@@ -1080,14 +1080,14 @@ public class RESTEndpoint implements RESTService {
       LOGGER.debug("No filename parameter provided - generating default filename");
       String fileExtension = DEFAULT_FILE_EXTENSION;
       try {
-        fileExtension = mimeTypeMapper.getFileExtensionForMimeType(contentType); // DDF-2307
+        fileExtension = mimeTypeMapper.getFileExtensionForMimeType(contentType); // TODO DDF-2307
         if (StringUtils.isEmpty(fileExtension)) {
           fileExtension = DEFAULT_FILE_EXTENSION;
         }
       } catch (MimeTypeResolutionException e) {
         LOGGER.debug("Exception getting file extension for contentType = {}", contentType);
       }
-      filename = DEFAULT_FILE_NAME + "." + fileExtension; // DDF-2263
+      filename = DEFAULT_FILE_NAME + "." + fileExtension; // TODO DDF-2263
       LOGGER.debug("No filename parameter provided - default to {}", filename);
     } else {
       filename = FilenameUtils.getName(filename);

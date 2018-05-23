@@ -76,6 +76,11 @@
         <bundle>mvn:ddf.catalog.core/catalog-core-metacardtype/${project.version}</bundle>
     </feature>
 
+    <feature name="catalog-transformer-propertyjson" version="${project.version}"
+             description="Input transformer for PropertyJson">
+        <bundle>mvn:ddf.catalog.transformer/propertyjson-input-transformer/${project.version}</bundle>
+    </feature>
+
     <feature name="catalog-core-plugins" version="${project.version}"
              description="Catalog core plugins">
         <bundle>mvn:ddf.catalog.core/catalog-core-resourcesizeplugin/${project.version}</bundle>
@@ -546,5 +551,6 @@
         <feature>catalog-transformer-geoformatter</feature>
         <feature>catalog-transformer-thumbnail</feature>
         <feature>catalog-metacardingest-network</feature>
+        <feature>catalog-transformer-propertyjson</feature>
     </feature>
 </features>

@@ -384,6 +384,7 @@
             type="Boolean"
             default="false"
             required="false"/>
+
     </OCD>
 
     <Designate pid="org.codice.ddf.catalog.ui.config">

@@ -97,6 +97,15 @@ define([
                 return _.extend(attributeToVal, childView.toJSON());
             }, {});
         },
+        toPropertyJSON() {
+            return {
+                properties: this.children.reduce(function(attributeToVal, childView) {
+                    const json = childView.toJSON();
+                    const values = json.values.filter((n) => n != null);
+                    return _.extend(attributeToVal, { [json.attribute]: values });
+                }, {})
+            };
+        },
         toPatchJSON: function(addedAttributes, removedAttributes) {
             var attributeArray = [];
             this.children.forEach(function(childView) {
