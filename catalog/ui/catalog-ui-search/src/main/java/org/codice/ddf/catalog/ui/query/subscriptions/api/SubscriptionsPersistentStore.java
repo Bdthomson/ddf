@@ -11,7 +11,7 @@
  * License is distributed along with this program and can be found at
  * <http://www.gnu.org/licenses/lgpl.html>.
  */
-package org.codice.ddf.catalog.ui.query.monitor.api;
+package org.codice.ddf.catalog.ui.query.subscriptions.api;
 
 import java.util.Set;
 

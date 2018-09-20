@@ -28,7 +28,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.codice.ddf.catalog.ui.query.monitor.api.SubscriptionsPersistentStore;
+import org.codice.ddf.catalog.ui.query.subscriptions.api.SubscriptionsPersistentStore;
 import org.codice.ddf.persistence.PersistenceException;
 import org.codice.ddf.persistence.PersistentItem;
 import org.codice.ddf.persistence.PersistentStore;

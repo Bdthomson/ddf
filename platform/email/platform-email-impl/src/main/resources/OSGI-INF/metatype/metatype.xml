@@ -22,12 +22,12 @@
 
         <AD
                 description="Mail server hostname (must be resolvable by DNS) or IP address."
-                name="Host" id="hostName" required="true"
+                name="Host" id="hostName"
                 type="String" default=""/>
 
         <AD
                 description="Mail server port number."
-                name="Port" id="portNumber" required="true"
+                name="Port" id="portNumber"
                 type="Integer" default="25"/>
 
         <AD

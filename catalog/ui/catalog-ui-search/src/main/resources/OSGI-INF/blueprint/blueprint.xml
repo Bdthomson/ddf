@@ -557,6 +557,12 @@
         <argument ref="persistentStore"/>
     </bean>
 
+    <service ref="workspacePersistentStore" interface="org.codice.ddf.catalog.ui.query.subscriptions.api.SubscriptionsPersistentStore">
+        <service-properties>
+            <entry key="id" value="org.codice.ddf.catalog.ui.query.monitor.impl.SubscriptionsPersistentStoreImpl"/>
+        </service-properties>
+    </service>
+
     <reference id="smtpClient" availability="mandatory"
                interface="org.codice.ddf.platform.email.SmtpClient"/>
 

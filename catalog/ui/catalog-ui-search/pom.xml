@@ -380,7 +380,7 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
-                        <!--todo: why do we embed spark-core if it's a bundle? https://codice.atlassian.net/browse/DDF-3883-->
+                        <!-- TODO: why do we embed spark-core if it's a bundle? https://codice.atlassian.net/browse/DDF-3883-->
                         <Embed-Dependency>
                             antlr4-runtime,
                             c3p0,
@@ -395,7 +395,6 @@
                             httpcore,
                             platform-email-impl,
                             platform-util,
-                            platform-util-unavailableurls,
                             tlmatcher,
                             proxy-camel-route,
                             proxy-camel-servlet,
@@ -431,7 +430,8 @@
                             *
                         </Import-Package>
                         <Export-Package>
-                            org.codice.ddf.catalog.ui.metacard.internal
+                            org.codice.ddf.catalog.ui.metacard.internal,
+                            org.codice.ddf.catalog.ui.query.subscriptions.api
                         </Export-Package>
                     </instructions>
                 </configuration>

@@ -14,7 +14,7 @@
 package org.codice.ddf.catalog.ui.query.monitor.impl;
 
 import static org.apache.commons.lang3.Validate.notNull;
-import static org.codice.ddf.catalog.ui.query.monitor.api.SubscriptionsPersistentStore.SUBSCRIPTIONS_TYPE;
+import static org.codice.ddf.catalog.ui.query.subscriptions.api.SubscriptionsPersistentStore.SUBSCRIPTIONS_TYPE;
 
 import ddf.catalog.CatalogFramework;
 import ddf.catalog.data.Result;
