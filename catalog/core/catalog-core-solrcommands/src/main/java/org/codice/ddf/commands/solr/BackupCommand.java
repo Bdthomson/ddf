@@ -26,12 +26,6 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.response.CollectionAdminResponse;
-import org.apache.solr.client.solrj.response.RequestStatusState;
-import org.apache.solr.client.solrj.response.UpdateResponse;
-import org.apache.solr.common.util.NamedList;
-import org.codice.ddf.configuration.SystemBaseUrl;
-import org.codice.solr.factory.impl.HttpSolrClientFactory;
-import org.osgi.service.cm.Configuration;
 
 @Service
 @Command(
@@ -107,18 +101,8 @@ public class BackupCommand extends SolrCommands {
   )
   int numberToKeep = 0;
 
-  private static final String SOLR_CLIENT_PROP = "solr.client";
-
-  private static final String CLOUD_SOLR_CLIENT_TYPE = "CloudSolrClient";
-
-  private static final String DEFAULT_CORE_NAME = "catalog";
-
-  private static final String SEE_COMMAND_USAGE_MESSAGE =
-      "Invalid Argument(s). Please see command usage for details.";
-
   @Override
   public Object execute() throws Exception {
-
     if (isSystemConfiguredWithSolrCloud()) {
       performSolrCloudBackup();
 
@@ -132,7 +116,7 @@ public class BackupCommand extends SolrCommands {
   private void performSingleNodeSolrBackup() throws URISyntaxException {
     verifySingleNodeBackupInput();
 
-    String backupUrl = getBackupUrl(coreName);
+    String backupUrl = getReplicationUrl(coreName);
 
     URIBuilder uriBuilder = new URIBuilder(backupUrl);
     uriBuilder.addParameter("command", "backup");
@@ -159,7 +143,7 @@ public class BackupCommand extends SolrCommands {
 
       if (asyncBackupStatus) {
         verifyCloudBackupStatusInput();
-        getBackupStatus(client, asyncBackupReqId);
+        getStatus(client, asyncBackupReqId);
       } else {
         verifyCloudBackupInput();
         performSolrCloudBackup(client);
@@ -180,54 +164,7 @@ public class BackupCommand extends SolrCommands {
               "Backup command failed due to: %d - %s %n Request: %s",
               responseWrapper.getStatusCode(),
               responseWrapper.getStatusPhrase(),
-              getBackupUrl(coreName)));
-    }
-  }
-
-  private String getBackupUrl(String coreName) {
-    String backupUrl = HttpSolrClientFactory.getDefaultHttpsAddress();
-
-    if (configurationAdmin != null) {
-      try {
-        Configuration solrConfig =
-            configurationAdmin.getConfiguration(
-                "(service.pid=ddf.catalog.solr.external.SolrHttpCatalogProvider)");
-        if (solrConfig != null) {
-          if (solrConfig.getProperties() != null && solrConfig.getProperties().get("url") != null) {
-            LOGGER.debug("Found url property in config, setting backup url");
-            backupUrl = (String) solrConfig.getProperties().get("url");
-          } else {
-            LOGGER.debug("No Solr config found, checking System settings");
-            if (System.getProperty("hostContext") != null) {
-              backupUrl =
-                  SystemBaseUrl.INTERNAL.constructUrl(
-                      SystemBaseUrl.INTERNAL.getProtocol(), System.getProperty("hostContext"));
-              LOGGER.debug("Trying system configured URL instead: {}", backupUrl);
-            } else {
-              LOGGER.info(
-                  "No Solr url configured, defaulting to: {}",
-                  HttpSolrClientFactory.getDefaultHttpsAddress());
-            }
-          }
-        }
-      } catch (IOException e) {
-        LOGGER.debug("Unable to get Solr url from bundle config, will check system properties.");
-      }
-    }
-    return backupUrl + "/" + coreName + "/replication";
-  }
-
-  private boolean isSystemConfiguredWithSolrCloud() {
-    String solrClientType = System.getProperty(SOLR_CLIENT_PROP);
-    LOGGER.debug("solr client type: {}", solrClientType);
-    if (solrClientType != null) {
-      return StringUtils.equals(solrClientType, CLOUD_SOLR_CLIENT_TYPE);
-    } else {
-      printErrorMessage(
-          String.format(
-              "Could not determine Solr Client Type. Please verify that the system property %s is configured in %s.",
-              SOLR_CLIENT_PROP, SYSTEM_PROPERTIES_PATH));
-      return false;
+              getReplicationUrl(coreName)));
     }
   }
 
@@ -256,38 +193,6 @@ public class BackupCommand extends SolrCommands {
     String requestId = backup.processAsync(client);
     LOGGER.debug("Async backup request Id: {}", requestId);
     return requestId;
-  }
-
-  private void getBackupStatus(SolrClient client, String requestId) {
-    try {
-      CollectionAdminRequest.RequestStatusResponse requestStatusResponse =
-          CollectionAdminRequest.requestStatus(requestId).process(client);
-      RequestStatusState requestStatus = requestStatusResponse.getRequestStatus();
-      printInfoMessage(
-          String.format(
-              "Backup status for request Id [%s] is [%s].",
-              asyncBackupReqId, requestStatus.getKey()));
-      LOGGER.debug("Async backup request status: {}", requestStatus.getKey());
-      if (requestStatus == RequestStatusState.FAILED) {
-        printErrorMessage("Backup status failed. ");
-        printResponseErrorMessages(requestStatusResponse);
-      }
-    } catch (Exception e) {
-      String message = e.getMessage() != null ? e.getMessage() : "Unable to get status of backup.";
-      printErrorMessage(String.format("Backup status failed. %s", message));
-    }
-  }
-
-  private void printResponseErrorMessages(CollectionAdminResponse response) {
-    NamedList<String> errorMessages = response.getErrorMessages();
-    if (errorMessages != null) {
-      for (int i = 0; i < errorMessages.size(); i++) {
-        String name = errorMessages.getName(i);
-        String value = errorMessages.getVal(i);
-        printErrorMessage(
-            String.format("\t%d. Error Name: %s; Error Value: %s", i + 1, name, value));
-      }
-    }
   }
 
   private String getBackupName() {
@@ -345,17 +250,6 @@ public class BackupCommand extends SolrCommands {
     } catch (Exception e) {
       String message = e.getMessage() != null ? e.getMessage() : "";
       printErrorMessage(String.format("Backup failed. %s", message));
-    }
-  }
-
-  private void optimizeCollection(SolrClient client, String collection)
-      throws IOException, SolrServerException {
-    LOGGER.debug("Optimization of collection [{}] is in progress.", collection);
-    printInfoMessage(String.format("Optimizing of collection [%s] is in progress.", collection));
-    UpdateResponse updateResponse = client.optimize(collection);
-    LOGGER.debug("Optimization status: {}", updateResponse.getStatus());
-    if (updateResponse.getStatus() != 0) {
-      throw new SolrServerException(String.format("Unable to optimize collection [%s].", coreName));
     }
   }
 }

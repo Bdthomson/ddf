@@ -110,6 +110,10 @@
             <artifactId>commons-lang</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
             <version>${solr.version}</version>
@@ -184,6 +188,7 @@
                             httpmime,
                             commons-io,
                             commons-lang,
+                            commons-lang3,
                             lucene-core,
                             joda-time,
                             platform-util

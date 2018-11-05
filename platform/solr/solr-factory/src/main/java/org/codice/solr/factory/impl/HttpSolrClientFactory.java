@@ -43,7 +43,6 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.request.CoreAdminRequest;
 import org.apache.solr.client.solrj.response.CoreAdminResponse;
-import org.codice.ddf.configuration.SystemBaseUrl;
 import org.codice.solr.factory.SolrClientFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,16 +98,9 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
 
   @Override
   public org.codice.solr.client.solrj.SolrClient newClient(String core) {
-    String solrUrl =
-        StringUtils.defaultIfBlank(
-            AccessController.doPrivileged(
-                (PrivilegedAction<String>) () -> System.getProperty(SOLR_HTTP_URL)),
-            getDefaultHttpsAddress());
+    String solrUrl = getDefaultHttpsAddress();
     final String coreUrl = solrUrl + "/" + core;
-    final String solrDataDir =
-        AccessController.doPrivileged(
-            (PrivilegedAction<String>) () -> System.getProperty(SOLR_DATA_DIR));
-
+    final String solrDataDir = getSolrDataDir();
     if (solrDataDir != null) {
       ConfigurationStore.getInstance().setDataDirectoryPath(solrDataDir);
     }
@@ -154,10 +146,21 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
    * @return Solr server secure HTTP address
    */
   public static String getDefaultHttpsAddress() {
-    return SystemBaseUrl.INTERNAL.constructUrl("https", SOLR_CONTEXT);
+    return AccessController.doPrivileged(
+        (PrivilegedAction<String>) () -> System.getProperty(SOLR_HTTP_URL));
   }
 
-  private static String[] getProtocols() {
+  /**
+   * Gets the Solr Data directory
+   *
+   * @return
+   */
+  public static String getSolrDataDir() {
+    return AccessController.doPrivileged(
+        (PrivilegedAction<String>) () -> System.getProperty(SOLR_DATA_DIR));
+  }
+
+  public static String[] getProtocols() {
     if (AccessController.doPrivileged(
             (PrivilegedAction<String>) () -> System.getProperty(HTTPS_PROTOCOLS))
         != null) {
@@ -170,7 +173,7 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
     }
   }
 
-  private static String[] getCipherSuites() {
+  public static String[] getCipherSuites() {
     if (AccessController.doPrivileged(
             (PrivilegedAction<String>) () -> System.getProperty(HTTPS_CIPHER_SUITES))
         != null) {
@@ -183,7 +186,7 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
     }
   }
 
-  private static SSLContext getSslContext() {
+  public static SSLContext getSslContext() {
     final Boolean check =
         AccessController.doPrivileged(
             (PrivilegedAction<Boolean>)
@@ -256,7 +259,7 @@ public final class HttpSolrClientFactory implements SolrClientFactory {
     return keyStore;
   }
 
-  private static void createSolrCore(
+  public static void createSolrCore(
       String url, String coreName, String configFileName, CloseableHttpClient httpClient)
       throws IOException, SolrServerException {
 
