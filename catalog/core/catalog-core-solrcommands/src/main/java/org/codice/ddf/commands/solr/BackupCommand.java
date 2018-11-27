@@ -38,12 +38,10 @@ public class BackupCommand extends SolrCommands {
   @Option(
     name = "-d",
     aliases = {"--dir"},
-    multiValued = false,
-    required = false,
     description =
-        "Full path to location where backups will be written. If this option is not supplied "
-            + " for single node Solr backups, the backup will be written in the data directory "
-            + " for the selected core. For SolrCloud  backups, the backup location must be shared "
+        "Full path to location where backups will be written. If this option is not supplied"
+            + " for single node Solr backups, the backup will be written in the data directory"
+            + " for the selected core. For SolrCloud  backups, the backup location must be shared"
             + " by all Solr nodes."
   )
   String backupLocation;
@@ -51,8 +49,6 @@ public class BackupCommand extends SolrCommands {
   @Option(
     name = "-c",
     aliases = {"--coreName"},
-    multiValued = false,
-    required = false,
     description =
         "Name of the Solr core/collection to be backed up. If not specified, the 'catalog' core/collection will be backed up."
   )
@@ -61,8 +57,6 @@ public class BackupCommand extends SolrCommands {
   @Option(
     name = "-a",
     aliases = {"--asyncBackup"},
-    multiValued = false,
-    required = false,
     description = "Perform an asynchronous backup of SolrCloud."
   )
   boolean asyncBackup;
@@ -70,8 +64,6 @@ public class BackupCommand extends SolrCommands {
   @Option(
     name = "-s",
     aliases = {"--asyncBackupStatus"},
-    multiValued = false,
-    required = false,
     description =
         "Get the status of a SolrCloud asynchronous backup. Used in conjunction with --asyncBackupReqId."
   )
@@ -80,8 +72,6 @@ public class BackupCommand extends SolrCommands {
   @Option(
     name = "-i",
     aliases = {"--asyncBackupReqId"},
-    multiValued = false,
-    required = false,
     description =
         "Request Id returned after performing a SolrCloud asynchronous backup. This request Id is used to track"
             + " the status of a given backup. When requesting a backup status, --asyncBackupStatus and --asyncBackupReqId"
@@ -92,10 +82,8 @@ public class BackupCommand extends SolrCommands {
   @Option(
     name = "-n",
     aliases = {"--numToKeep"},
-    multiValued = false,
-    required = false,
     description =
-        "Number of backups to be maintained. If this backup opertion will result"
+        "Number of backups to be maintained. If this backup operation will result"
             + " in exceeding this threshold, the oldest backup will be deleted. This option is not supported"
             + " when backing up SolrCloud."
   )
@@ -104,9 +92,10 @@ public class BackupCommand extends SolrCommands {
   @Override
   public Object execute() throws Exception {
     if (isSystemConfiguredWithSolrCloud()) {
+      LOGGER.trace("System configuration: Solr Cloud");
       performSolrCloudBackup();
-
     } else {
+      LOGGER.trace("System configuration: Single Node Solr Client");
       performSingleNodeSolrBackup();
     }
 
@@ -201,27 +190,51 @@ public class BackupCommand extends SolrCommands {
   }
 
   private void verifySingleNodeBackupInput() {
+    LOGGER.trace("Verifying single node backup input.");
     if (asyncBackup || asyncBackupStatus || StringUtils.isNotBlank(asyncBackupReqId)) {
       throw new IllegalArgumentException(SEE_COMMAND_USAGE_MESSAGE);
     }
   }
 
+  /** Verify that cloud backup input has all required options. */
   private void verifyCloudBackupInput() {
-    if (StringUtils.isBlank(backupLocation)
-        || asyncBackupStatus
-        || StringUtils.isNotBlank(asyncBackupReqId)
-        || numberToKeep > 0) {
-      throw new IllegalArgumentException(SEE_COMMAND_USAGE_MESSAGE);
+    LOGGER.trace("Verifying cloud backup input.");
+    if (StringUtils.isBlank(backupLocation)) {
+      throw new IllegalArgumentException(
+          "Backup location must be provided in Cloud Backup." + SEE_COMMAND_USAGE_MESSAGE);
+    } else if (StringUtils.isNotBlank(asyncBackupReqId)) {
+      throw new IllegalArgumentException(
+          "asyncBackupReqId provided without asyncBackupStatus option."
+              + SEE_COMMAND_USAGE_MESSAGE);
+    } else if (numberToKeep > 0) {
+      throw new IllegalArgumentException(
+          "numberToKeep provided but is not supported for Solr Cloud backups."
+              + SEE_COMMAND_USAGE_MESSAGE);
     }
   }
 
+  /** Verify that cloud backup status input has all required options. */
   private void verifyCloudBackupStatusInput() {
-    if (StringUtils.isBlank(asyncBackupReqId)
-        || numberToKeep > 0
-        || StringUtils.isNotBlank(backupLocation)
-        || !StringUtils.equals(coreName, DEFAULT_CORE_NAME)
-        || asyncBackup) {
-      throw new IllegalArgumentException(SEE_COMMAND_USAGE_MESSAGE);
+    LOGGER.trace("Verifying cloud backup status input.");
+    if (StringUtils.isNotBlank(backupLocation)) {
+      LOGGER.debug("Backup location provided during status check, ignoring option.");
+    }
+
+    if (asyncBackup) {
+      LOGGER.debug("asyncBackup option provided during status check, ignoring option.");
+    }
+
+    if (StringUtils.isBlank(asyncBackupReqId)) {
+      throw new IllegalArgumentException(
+          "asyncBackupReqId must not be empty when checking on async status of a backup.");
+    } else if (numberToKeep > 0) {
+      throw new IllegalArgumentException(
+          "numberToKeep provided but is not supported for Solr Cloud backups."
+              + SEE_COMMAND_USAGE_MESSAGE);
+    } else if (!StringUtils.equals(coreName, DEFAULT_CORE_NAME)) {
+      throw new IllegalArgumentException(
+          "coreName provided during status check but is not used. Use the async req id to check the status of your backup."
+              + SEE_COMMAND_USAGE_MESSAGE);
     }
   }
 
