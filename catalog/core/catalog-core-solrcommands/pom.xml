@@ -187,6 +187,7 @@
                             httpcore,
                             httpmime,
                             commons-io,
+                            commons-collections4,
                             commons-lang,
                             commons-lang3,
                             lucene-core,
@@ -258,7 +259,7 @@
                             <rules>
                                 <ArtifactSizeEnforcerRule
                                     implementation="org.codice.maven.artifactsize.ArtifactSizeEnforcerRule">
-                                    <maxArtifactSize>17.9_MB</maxArtifactSize>
+                                    <maxArtifactSize>18.9_MB</maxArtifactSize>
                                 </ArtifactSizeEnforcerRule>
                             </rules>
                         </configuration>
