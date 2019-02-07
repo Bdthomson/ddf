@@ -228,19 +228,11 @@ const appendCssIfNeeded = (model: Model, el: El) => {
 
   const currentWorkspace = store.getCurrentWorkspace()
   el.toggleClass('in-workspace', Boolean(currentWorkspace))
-  el.toggleClass('is-downloadable', isDownloadable(model))
   el.toggleClass('is-multiple', model.length > 1)
   el.toggleClass('is-routed', isRouted())
   el.toggleClass('is-blacklisted', isBlacklisted(model))
 }
 
-const isDownloadable = (model: Model): boolean =>
-  model.some((result: Result) =>
-    result
-      .get('metacard')
-      .get('properties')
-      .get('resource-download-url')
-  )
 const isRouted = (): boolean =>
   router && router.toJSON().name === 'openMetacard'
 const isBlacklisted = (model: Model): boolean => {
@@ -406,19 +398,30 @@ const MetacardInteraction = (props: any) => {
     >
       <div className={`interaction-icon ${props.icon || ''}`} />
       <div className="interaction-text">{props.text}</div>
+      {props.children}
     </div>
   )
 }
 
+const isDownloadable = (model: Model): boolean =>
+  model.some((result: Result) =>
+    result
+      .get('metacard')
+      .get('properties')
+      .get('resource-download-url')
+  )
+
 const DownloadProduct = (props: any) => {
+  if (!isDownloadable(props.model)) {
+    return null
+  }
   return (
-    <div
-      className="metacard-interaction interaction-download"
-      data-help="Downloads the result's associated product directly to your machine."
+    <MetacardInteraction
+      text="Download"
+      help="Downloads the result's associated product directly to your machine."
+      icon="fa fa-download"
       onClick={() => handleDownload(props.model)}
     >
-      <div className="interaction-icon fa fa-download" />
-      <div className="interaction-text">Download</div>
       {isRemoteResourceCached(props.model) && (
         <span
           data-help="Displayed if the remote resource has been cached locally."
@@ -427,7 +430,7 @@ const DownloadProduct = (props: any) => {
           Local
         </span>
       )}
-    </div>
+    </MetacardInteraction>
   )
 }
 
