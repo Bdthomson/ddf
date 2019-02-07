@@ -66,29 +66,5 @@ export const render = (props: Props) => (
     {props.viewModel.categories.map(category =>
       renderCategory(props.withCloseDropdown, category)
     )}
-    <div
-      className="metacard-interaction interaction-download"
-      data-help="Downloads the result's associated product directly to your machine."
-      onClick={props.handleDownload}
-    >
-      <div className="interaction-icon fa fa-download" />
-      <div className="interaction-text">Download</div>
-      {props.isRemoteResourceCached && (
-        <span
-          data-help="Displayed if the remote resource has been cached locally."
-          className="download-cached"
-        >
-          Local
-        </span>
-      )}
-    </div>
-    <div
-      className="metacard-interaction interaction-create-search"
-      data-help="Uses the geometry of the metacard to populate a search."
-      onClick={props.handleCreateSearch}
-    >
-      <div className="interaction-icon fa fa-globe" />
-      <div className="interaction-text">Create Search from Location</div>
-    </div>
   </>
 )

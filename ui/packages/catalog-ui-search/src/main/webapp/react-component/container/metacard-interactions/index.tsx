@@ -347,6 +347,66 @@ const viewModelFromProps = (props: Props): ViewModel => {
   return { categories: [...defaultCategories, ...categories] } as ViewModel
 }
 
+const AddToList = (props: any) => {
+  return (
+    <MarionetteRegionContainer
+      data-help="Add the result to a list."
+      className="metacard-interaction interaction-add"
+      view={createAddRemoveRegion(props.model)}
+      viewOptions={{ model: props.model }}
+    />
+  )
+}
+
+const OtherItems = (props: any) => {
+  return (
+    <>
+      <View
+        handleCreateSearch={() => withCloseDropdown(props, handleCreateSearch)}
+        handleDownload={() => withCloseDropdown(props, handleDownload)}
+        isRemoteResourceCached={isRemoteResourceCached(props.model)}
+        withCloseDropdown={handler => withCloseDropdown(props, handler)}
+        viewModel={viewModelFromProps(props)}
+      />
+      <div
+        className="metacard-interaction interaction-download"
+        data-help="Downloads the result's associated product directly to your machine."
+        onClick={props.handleDownload}
+      >
+        <div className="interaction-icon fa fa-download" />
+        <div className="interaction-text">Download</div>
+        {props.isRemoteResourceCached && (
+          <span
+            data-help="Displayed if the remote resource has been cached locally."
+            className="download-cached"
+          >
+            Local
+          </span>
+        )}
+      </div>
+      <div
+        className="metacard-interaction interaction-create-search"
+        data-help="Uses the geometry of the metacard to populate a search."
+        onClick={props.handleCreateSearch}
+      >
+        <div className="interaction-icon fa fa-globe" />
+        <div className="interaction-text">Create Search from Location</div>
+      </div>
+    </>
+  )
+}
+
+const ExportActions = (props: any) => {
+  return (
+    <MarionetteRegionContainer
+      data-help="Opens the available actions for the item."
+      className="metacard-interaction interaction-actions-export composed-menu"
+      view={createResultActionsExportRegion(props.model)}
+      viewOptions={{ model: props.model }}
+    />
+  )
+}
+
 class MetacardInteractions extends React.Component<Props> {
   componentDidMount = () => {
     appendCssIfNeeded(this.props.model, this.props.el)
@@ -376,27 +436,10 @@ class MetacardInteractions extends React.Component<Props> {
 
   render = () => (
     <>
-      <MarionetteRegionContainer
-        data-help="Add the result to a list."
-        className="metacard-interaction interaction-add"
-        view={createAddRemoveRegion(this.props.model)}
-        viewOptions={{ model: this.props.model }}
-      />
-      <View
-        handleCreateSearch={() =>
-          withCloseDropdown(this.props, handleCreateSearch)
-        }
-        handleDownload={() => withCloseDropdown(this.props, handleDownload)}
-        isRemoteResourceCached={isRemoteResourceCached(this.props.model)}
-        withCloseDropdown={handler => withCloseDropdown(this.props, handler)}
-        viewModel={viewModelFromProps(this.props)}
-      />
-      <MarionetteRegionContainer
-        data-help="Opens the available actions for the item."
-        className="metacard-interaction interaction-actions-export composed-menu"
-        view={createResultActionsExportRegion(this.props.model)}
-        viewOptions={{ model: this.props.model }}
-      />
+      {/* Have to add props to all three items */}
+      <AddToList  {...this.props}/>
+      <OtherItems  {...this.props}/>
+      <ExportActions {...this.props} />
       {this.props.extensions && (
         <MarionetteRegionContainer
           className="composed-menu interaction-extensions"
