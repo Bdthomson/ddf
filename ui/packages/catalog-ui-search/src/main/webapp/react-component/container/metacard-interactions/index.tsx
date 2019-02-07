@@ -81,6 +81,7 @@ const withCloseDropdown = (
   context: Props,
   action: (context: Props) => void
 ) => {
+  debugger
   context.el.trigger(`closeDropdown.${CustomElements.getNamespace()}`)
   action(context)
 }
@@ -368,31 +369,41 @@ const OtherItems = (props: any) => {
         withCloseDropdown={handler => withCloseDropdown(props, handler)}
         viewModel={viewModelFromProps(props)}
       />
-      <div
-        className="metacard-interaction interaction-download"
-        data-help="Downloads the result's associated product directly to your machine."
-        onClick={props.handleDownload}
-      >
-        <div className="interaction-icon fa fa-download" />
-        <div className="interaction-text">Download</div>
-        {props.isRemoteResourceCached && (
-          <span
-            data-help="Displayed if the remote resource has been cached locally."
-            className="download-cached"
-          >
-            Local
-          </span>
-        )}
-      </div>
-      <div
-        className="metacard-interaction interaction-create-search"
-        data-help="Uses the geometry of the metacard to populate a search."
-        onClick={props.handleCreateSearch}
-      >
-        <div className="interaction-icon fa fa-globe" />
-        <div className="interaction-text">Create Search from Location</div>
-      </div>
     </>
+  )
+}
+
+const DownloadProduct = (props: any) => {
+  return (
+    <div
+      className="metacard-interaction interaction-download"
+      data-help="Downloads the result's associated product directly to your machine."
+      onClick={props.handleDownload}
+    >
+      <div className="interaction-icon fa fa-download" />
+      <div className="interaction-text">Download</div>
+      {props.isRemoteResourceCached && (
+        <span
+          data-help="Displayed if the remote resource has been cached locally."
+          className="download-cached"
+        >
+          Local
+        </span>
+      )}
+    </div>
+  )
+}
+
+const CreateLocationSearch = (props: any) => {
+  return (
+    <div
+      className="metacard-interaction interaction-create-search"
+      data-help="Uses the geometry of the metacard to populate a search."
+      onClick={() => handleCreateSearch(props)}
+    >
+      <div className="interaction-icon fa fa-globe" />
+      <div className="interaction-text">Create Search from Location</div>
+    </div>
   )
 }
 
@@ -437,8 +448,10 @@ class MetacardInteractions extends React.Component<Props> {
   render = () => (
     <>
       {/* Have to add props to all three items */}
-      <AddToList  {...this.props}/>
-      <OtherItems  {...this.props}/>
+      <AddToList  {...this.props} />
+      <OtherItems  {...this.props} />
+      <DownloadProduct {...this.props} />
+      <CreateLocationSearch {...this.props} />
       <ExportActions {...this.props} />
       {this.props.extensions && (
         <MarionetteRegionContainer
