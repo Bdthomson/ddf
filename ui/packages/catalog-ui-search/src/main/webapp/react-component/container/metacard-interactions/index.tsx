@@ -81,7 +81,7 @@ const withCloseDropdown = (
   action(context)
 }
 
-const handleDownload = (context: Props) => {
+const handleDownload = (model: Model) => {
   const openValidUrl = (result: Result) => {
     const downloadUrl = result
       .get('metacard')
@@ -90,7 +90,7 @@ const handleDownload = (context: Props) => {
     downloadUrl && window.open(downloadUrl)
   }
 
-  context.model.forEach(openValidUrl)
+  model.forEach(openValidUrl)
 }
 
 const getGeoLocations = (model: Model) =>
@@ -397,12 +397,25 @@ const OtherItems = (props: Props) => {
   )
 }
 
+const MetacardInteraction = (props: any) => {
+  return (
+    <div
+      className="metacard-interaction"
+      data-help={props.help}
+      onClick={() => props.onClick(props)}
+    >
+      <div className={`interaction-icon ${props.icon || ''}`} />
+      <div className="interaction-text">{props.text}</div>
+    </div>
+  )
+}
+
 const DownloadProduct = (props: any) => {
   return (
     <div
       className="metacard-interaction interaction-download"
       data-help="Downloads the result's associated product directly to your machine."
-      onClick={() => handleDownload(props)}
+      onClick={() => handleDownload(props.model)}
     >
       <div className="interaction-icon fa fa-download" />
       <div className="interaction-text">Download</div>
@@ -425,14 +438,13 @@ const CreateLocationSearch = (props: any) => {
     return null
   }
   return (
-    <div
-      className="metacard-interaction interaction-create-search"
-      data-help="Uses the geometry of the metacard to populate a search."
+    <MetacardInteraction
+      {...props}
+      icon="fa fa-globe"
+      text="Create Search from Location"
+      help="Uses the geometry of the metacard to populate a search"
       onClick={() => handleCreateSearch(props)}
-    >
-      <div className="interaction-icon fa fa-globe" />
-      <div className="interaction-text">Create Search from Location</div>
-    </div>
+    />
   )
 }
 
