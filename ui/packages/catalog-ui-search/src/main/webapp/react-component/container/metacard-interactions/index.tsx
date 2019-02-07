@@ -389,7 +389,15 @@ const OtherItems = (props: Props) => {
   )
 }
 
-const MetacardInteraction = (props: any) => {
+type MetacardInteractionProps = {
+  help: string
+  icon: string
+  text: string
+  onClick: (props: any) => void
+  children: any
+}
+
+export const MetacardInteraction = (props: MetacardInteractionProps) => {
   return (
     <div
       className="metacard-interaction"
@@ -491,7 +499,6 @@ class MetacardInteractions extends React.Component<Props> {
 
   render = () => (
     <>
-      {/* Have to add props to all three items */}
       <AddToList {...this.props} />
       <OtherItems {...this.props} />
       <DownloadProduct {...this.props} />
