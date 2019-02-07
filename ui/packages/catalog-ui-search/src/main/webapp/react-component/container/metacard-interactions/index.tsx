@@ -18,6 +18,7 @@ import { hot } from 'react-hot-loader'
 import * as CqlUtils from '../../../js/CQLUtils'
 
 import * as CustomElements from '../../../js/CustomElements'
+import styled from '../../../react-component/styles/styled-components'
 
 import * as QueryConfirmationView from '../../../component/confirmation/query/confirmation.query.view'
 import * as LoadingView from '../../../component/loading/loading.view'
@@ -79,18 +80,6 @@ const withCloseDropdown = (
 ) => {
   context.el.trigger(`closeDropdown.${CustomElements.getNamespace()}`)
   action(context)
-}
-
-const handleDownload = (model: Model) => {
-  const openValidUrl = (result: Result) => {
-    const downloadUrl = result
-      .get('metacard')
-      .get('properties')
-      .get('resource-download-url')
-    downloadUrl && window.open(downloadUrl)
-  }
-
-  model.forEach(openValidUrl)
 }
 
 const getGeoLocations = (model: Model) =>
@@ -225,13 +214,7 @@ const appendCssIfNeeded = (model: Model, el: El) => {
   }, 0)
 
   el.toggleClass('is-mixed', isMixed > 1)
-  el.toggleClass('is-multiple', model.length > 1)
-  el.toggleClass('is-routed', isRouted())
 }
-
-const isRouted = (): boolean =>
-  router && router.toJSON().name === 'openMetacard'
-
 const isBlacklisted = (model: Model): boolean => {
   const blacklist = user
     .get('user')
@@ -304,17 +287,36 @@ type MetacardInteractionProps = {
   children?: any
 }
 
+const InteractionIcon = styled.div`
+  text-align: center;
+  width: ${props => props.theme.minimumButtonSize};
+  display: inline-block;
+  line-height: ${props => props.theme.minimumButtonSize};
+  height: ${props => props.theme.minimumButtonSize};
+`
+
+const InteractionText = styled.div`
+  line-height: ${props => props.theme.minimumButtonSize};
+  height: ${props => props.theme.minimumButtonSize};
+  display: inline-block;
+`
+
+const Interaction = styled.div`
+  line-height: ${props => props.theme.minimumButtonSize};
+  height: ${props => props.theme.minimumButtonSize};
+  white-space: nowrap;
+  padding: 0px 10px;
+  cursor: pointer;
+  overflow: hidden;
+`
+
 export const MetacardInteraction = (props: MetacardInteractionProps) => {
   return (
-    <div
-      className="metacard-interaction"
-      data-help={props.help}
-      onClick={() => props.onClick(props)}
-    >
-      <div className={`interaction-icon ${props.icon || ''}`} />
-      <div className="interaction-text">{props.text}</div>
+    <Interaction data-help={props.help} onClick={() => props.onClick(props)}>
+      <InteractionIcon className={props.icon} />
+      <InteractionText>{props.text}</InteractionText>
       {props.children}
-    </div>
+    </Interaction>
   )
 }
 
@@ -325,6 +327,18 @@ const isDownloadable = (model: Model): boolean =>
       .get('properties')
       .get('resource-download-url')
   )
+
+const handleDownload = (model: Model) => {
+  const openValidUrl = (result: Result) => {
+    const downloadUrl = result
+      .get('metacard')
+      .get('properties')
+      .get('resource-download-url')
+    downloadUrl && window.open(downloadUrl)
+  }
+
+  model.forEach(openValidUrl)
+}
 
 const DownloadProduct = (props: any) => {
   if (!isDownloadable(props.model)) {
@@ -406,6 +420,13 @@ const BlacklistToggle = (props: any) => {
 
 const ExpandMetacard = (props: any) => {
   const fn = (handler: any) => withCloseDropdown(props, handler)
+
+  const isRouted = router && router.toJSON().name === 'openMetacard'
+
+  if (isRouted || props.model.length > 1) {
+    return null
+  }
+
   return (
     <MetacardInteraction
       text="Expand Metacard View"
@@ -418,11 +439,11 @@ const ExpandMetacard = (props: any) => {
   )
 }
 
-// TODO: What handles this
+// TODO: What handles this? Andrew?
 const ShareMetacard = (props: any) => {
-  // if (!props.show) {
-  //   return null
-  // }
+  if (props.model.length > 1) {
+    return null
+  }
 
   const fn = (handler: any) => withCloseDropdown(props, handler)
 
