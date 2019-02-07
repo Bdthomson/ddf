@@ -12,12 +12,8 @@
 import * as React from 'react'
 import { Geometry } from 'wkx'
 
-import {
-  render as View,
-  Model as ViewModel,
-} from '../../presentation/metacard-interactions'
-
 import withListenTo, { WithBackboneProps } from '../backbone-container'
+import { hot } from 'react-hot-loader'
 
 import * as CqlUtils from '../../../js/CQLUtils'
 
@@ -81,7 +77,6 @@ const withCloseDropdown = (
   context: Props,
   action: (context: Props) => void
 ) => {
-  debugger
   context.el.trigger(`closeDropdown.${CustomElements.getNamespace()}`)
   action(context)
 }
@@ -237,7 +232,6 @@ const appendCssIfNeeded = (model: Model, el: El) => {
   el.toggleClass('is-multiple', model.length > 1)
   el.toggleClass('is-routed', isRouted())
   el.toggleClass('is-blacklisted', isBlacklisted(model))
-  el.toggleClass('has-location', hasLocation(model))
 }
 
 const isDownloadable = (model: Model): boolean =>
@@ -275,8 +269,6 @@ const isRemoteResourceCached = (model: Model): boolean => {
     modelJson[0].metacard.properties['source-id'] !== sources.localCatalog
   )
 }
-
-const hasLocation = (model: Model): boolean => getGeoLocations(model).length > 0
 
 const createAddRemoveRegion = (model: Model) =>
   PopoutView.createSimpleDropdown({
@@ -359,16 +351,48 @@ const AddToList = (props: any) => {
   )
 }
 
-const OtherItems = (props: any) => {
+type Link = {
+  parent: string
+  icon: string
+  dataHelp: string
+  linkText: string
+  actionHandler: () => void
+}
+
+type Category = {
+  name: string
+  items: Array<Link>
+}
+
+type ViewModel = {
+  categories: Array<Category>
+}
+
+const OtherItems = (props: Props) => {
+  const viewModel = viewModelFromProps(props)
+  const fn = (handler: any) => withCloseDropdown(props, handler)
   return (
     <>
-      <View
-        handleCreateSearch={() => withCloseDropdown(props, handleCreateSearch)}
-        handleDownload={() => withCloseDropdown(props, handleDownload)}
-        isRemoteResourceCached={isRemoteResourceCached(props.model)}
-        withCloseDropdown={handler => withCloseDropdown(props, handler)}
-        viewModel={viewModelFromProps(props)}
-      />
+      {viewModel.categories.map(category => {
+        return (
+          <React.Fragment key={`category-${category.name}`}>
+            {category.items.map(link => {
+              return (
+                <div
+                  key={`key-${link.parent}-${link.linkText}`}
+                  className={`metacard-interaction ${link.parent}`}
+                  data-help={link.dataHelp}
+                  onClick={() => fn(link.actionHandler)}
+                >
+                  <div className={`interaction-icon ${link.icon}`} />
+                  <div className="interaction-text">{link.linkText}</div>
+                </div>
+              )
+            })}
+            <div className="is-divider composed-menu" />
+          </React.Fragment>
+        )
+      })}
     </>
   )
 }
@@ -378,11 +402,11 @@ const DownloadProduct = (props: any) => {
     <div
       className="metacard-interaction interaction-download"
       data-help="Downloads the result's associated product directly to your machine."
-      onClick={props.handleDownload}
+      onClick={() => handleDownload(props)}
     >
       <div className="interaction-icon fa fa-download" />
       <div className="interaction-text">Download</div>
-      {props.isRemoteResourceCached && (
+      {isRemoteResourceCached(props.model) && (
         <span
           data-help="Displayed if the remote resource has been cached locally."
           className="download-cached"
@@ -394,7 +418,12 @@ const DownloadProduct = (props: any) => {
   )
 }
 
+const hasLocation = (model: Model): boolean => getGeoLocations(model).length > 0
+
 const CreateLocationSearch = (props: any) => {
+  if (!hasLocation(props.model)) {
+    return null
+  }
   return (
     <div
       className="metacard-interaction interaction-create-search"
@@ -448,8 +477,8 @@ class MetacardInteractions extends React.Component<Props> {
   render = () => (
     <>
       {/* Have to add props to all three items */}
-      <AddToList  {...this.props} />
-      <OtherItems  {...this.props} />
+      <AddToList {...this.props} />
+      <OtherItems {...this.props} />
       <DownloadProduct {...this.props} />
       <CreateLocationSearch {...this.props} />
       <ExportActions {...this.props} />
@@ -464,4 +493,6 @@ class MetacardInteractions extends React.Component<Props> {
   )
 }
 
-export default withListenTo(MetacardInteractions)
+const Component = withListenTo(MetacardInteractions)
+
+export default hot(module)(Component)

@@ -26,7 +26,6 @@
   .interaction-add,
   .interaction-show,
   .interaction-share,
-  .interaction-create-search,
   .interaction-download {
     display: none;
   }
@@ -85,13 +84,5 @@
 @{customElementNamespace}metacard-interactions.is-downloadable {
   .interaction-download {
     display: block;
-  }
-}
-
-[data-route='openWorkspace'] {
-  @{customElementNamespace}metacard-interactions.has-location {
-    .interaction-create-search {
-      display: block;
-    }
   }
 }

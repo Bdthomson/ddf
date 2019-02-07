@@ -36,35 +36,27 @@ type Props = {
   isRemoteResourceCached: boolean
 }
 
-const renderCategory = (
-  withCloseDropdown: (action: () => void) => void,
-  category: Category
-) => (
-  <React.Fragment key={`category-${category.name}`}>
-    {category.items.map(item => renderLink(withCloseDropdown, item))}
-    <div className="is-divider composed-menu" />
-  </React.Fragment>
-)
-
-const renderLink = (
-  withCloseDropdown: (action: () => void) => void,
-  link: Link
-) => (
-  <div
-    key={`key-${link.parent}-${link.linkText}`}
-    className={`metacard-interaction ${link.parent}`}
-    data-help={link.dataHelp}
-    onClick={() => withCloseDropdown(link.actionHandler)}
-  >
-    <div className={`interaction-icon ${link.icon}`} />
-    <div className="interaction-text">{link.linkText}</div>
-  </div>
-)
-
 export const render = (props: Props) => (
   <>
-    {props.viewModel.categories.map(category =>
-      renderCategory(props.withCloseDropdown, category)
-    )}
+    {props.viewModel.categories.map(category => {
+      return (
+        <React.Fragment key={`category-${category.name}`}>
+          {category.items.map(link => {
+            return (
+              <div
+                key={`key-${link.parent}-${link.linkText}`}
+                className={`metacard-interaction ${link.parent}`}
+                data-help={link.dataHelp}
+                onClick={() => props.withCloseDropdown(link.actionHandler)}
+              >
+                <div className={`interaction-icon ${link.icon}`} />
+                <div className="interaction-text">{link.linkText}</div>
+              </div>
+            )
+          })}
+          <div className="is-divider composed-menu" />
+        </React.Fragment>
+      )
+    })}
   </>
 )
