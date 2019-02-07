@@ -225,16 +225,13 @@ const appendCssIfNeeded = (model: Model, el: El) => {
   }, 0)
 
   el.toggleClass('is-mixed', isMixed > 1)
-
-  const currentWorkspace = store.getCurrentWorkspace()
-  el.toggleClass('in-workspace', Boolean(currentWorkspace))
   el.toggleClass('is-multiple', model.length > 1)
   el.toggleClass('is-routed', isRouted())
-  el.toggleClass('is-blacklisted', isBlacklisted(model))
 }
 
 const isRouted = (): boolean =>
   router && router.toJSON().name === 'openMetacard'
+
 const isBlacklisted = (model: Model): boolean => {
   const blacklist = user
     .get('user')
@@ -283,56 +280,12 @@ const createResultActionsExportRegion = (model: Model) =>
     label: 'Export as',
   })
 
-const defaultLinks = [
-  {
-    parent: `interaction-hide`,
-    dataHelp: `Adds to a list
-    of results that will be hidden from future searches.  To clear this list,
-    click the Settings icon, select Hidden, then choose to unhide the record.`,
-    icon: `fa fa-eye-slash`,
-    linkText: `Hide from Future Searches`,
-    actionHandler: handleHide,
-  },
-  {
-    parent: `interaction-show`,
-    dataHelp: `Removes from the
-    list of results that are hidden from future searches.`,
-    icon: `fa fa-eye`,
-    linkText: `Unhide from Future Searches`,
-    actionHandler: handleShow,
-  },
-  {
-    parent: `interaction-expand`,
-    dataHelp: `Takes you to a
-    view that only focuses on this particular result.  Bookmarking it will allow
-    you to come back to this result directly.`,
-    icon: `fa fa-expand`,
-    linkText: `Expand Metacard View`,
-    actionHandler: handleExpand,
-  },
-  {
-    parent: `interaction-share`,
-    dataHelp: `Copies the
-    URL that leads to this result directly to your clipboard.`,
-    icon: `fa fa-share-alt`,
-    linkText: `Share Metacard`,
-    actionHandler: handleShare,
-  },
-]
-
-const viewModelFromProps = (props: Props): ViewModel => {
-  const defaultCategories = [{ name: 'default', items: defaultLinks }]
-
-  if (!props.categories) return { categories: defaultCategories } as ViewModel
-
-  const categories = Object.keys(props.categories).map(key => ({
-    name: key,
-    items: props.categories[key],
-  }))
-  return { categories: [...defaultCategories, ...categories] } as ViewModel
-}
-
 const AddToList = (props: any) => {
+  const currentWorkspace = store.getCurrentWorkspace()
+  if (!currentWorkspace) {
+    return null
+  }
+
   return (
     <MarionetteRegionContainer
       data-help="Add the result to a list."
@@ -343,58 +296,12 @@ const AddToList = (props: any) => {
   )
 }
 
-type Link = {
-  parent: string
-  icon: string
-  dataHelp: string
-  linkText: string
-  actionHandler: () => void
-}
-
-type Category = {
-  name: string
-  items: Array<Link>
-}
-
-type ViewModel = {
-  categories: Array<Category>
-}
-
-const OtherItems = (props: Props) => {
-  const viewModel = viewModelFromProps(props)
-  const fn = (handler: any) => withCloseDropdown(props, handler)
-  return (
-    <>
-      {viewModel.categories.map(category => {
-        return (
-          <React.Fragment key={`category-${category.name}`}>
-            {category.items.map(link => {
-              return (
-                <div
-                  key={`key-${link.parent}-${link.linkText}`}
-                  className={`metacard-interaction ${link.parent}`}
-                  data-help={link.dataHelp}
-                  onClick={() => fn(link.actionHandler)}
-                >
-                  <div className={`interaction-icon ${link.icon}`} />
-                  <div className="interaction-text">{link.linkText}</div>
-                </div>
-              )
-            })}
-            <div className="is-divider composed-menu" />
-          </React.Fragment>
-        )
-      })}
-    </>
-  )
-}
-
 type MetacardInteractionProps = {
   help: string
   icon: string
   text: string
   onClick: (props: any) => void
-  children: any
+  children?: any
 }
 
 export const MetacardInteraction = (props: MetacardInteractionProps) => {
@@ -470,40 +377,114 @@ const ExportActions = (props: any) => {
   )
 }
 
-class MetacardInteractions extends React.Component<Props> {
+const BlacklistToggle = (props: any) => {
+  const fn = (handler: any) => withCloseDropdown(props, handler)
+
+  if (props.blacklisted) {
+    return (
+      <MetacardInteraction
+        text="Unhide from Future Searches"
+        help="Removes from the
+              list of results that are hidden from future searches."
+        icon="fa fa-eye"
+        onClick={() => fn(handleShow)}
+      />
+    )
+  } else {
+    return (
+      <MetacardInteraction
+        text="Hide from Future Searches"
+        help="Adds to a list
+              of results that will be hidden from future searches.  To clear this list,
+              click the Settings icon, select Hidden, then choose to unhide the record."
+        icon="fa fa-eye-slash"
+        onClick={() => fn(handleHide)}
+      />
+    )
+  }
+}
+
+const ExpandMetacard = (props: any) => {
+  const fn = (handler: any) => withCloseDropdown(props, handler)
+  return (
+    <MetacardInteraction
+      text="Expand Metacard View"
+      help="Takes you to a
+            view that only focuses on this particular result.  Bookmarking it will allow
+            you to come back to this result directly."
+      icon="fa fa-expand"
+      onClick={() => fn(handleExpand)}
+    />
+  )
+}
+
+// TODO: What handles this
+const ShareMetacard = (props: any) => {
+  // if (!props.show) {
+  //   return null
+  // }
+
+  const fn = (handler: any) => withCloseDropdown(props, handler)
+
+  return (
+    <MetacardInteraction
+      text="Share Metacard"
+      icon="fa fa-share-alt"
+      help="Copies the URL that leads to this result directly to your clipboard."
+      onClick={() => fn(handleShare)}
+    />
+  )
+}
+
+type State = {
+  blacklisted: Boolean
+  model: any
+}
+
+class MetacardInteractions extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props)
+    this.state = {
+      model: null,
+      blacklisted: false,
+    }
+  }
   componentDidMount = () => {
     appendCssIfNeeded(this.props.model, this.props.el)
 
     const setState = (model: Model) => this.setState({ model: model })
-
-    const toggleIsBlacklisted = () =>
-      this.props.el.toggleClass(
-        'is-blacklisted',
-        isBlacklisted(this.props.model)
-      )
 
     this.props.listenTo(
       this.props.model,
       'change:metacard>properties',
       setState
     )
+
     this.props.listenTo(
       user
         .get('user')
         .get('preferences')
         .get('resultBlacklist'),
       'add remove update reset',
-      toggleIsBlacklisted
+      () => this.setState({ blacklisted: isBlacklisted(this.props.model) })
     )
   }
 
   render = () => (
     <>
       <AddToList {...this.props} />
-      <OtherItems {...this.props} />
+      <BlacklistToggle {...this.props} blacklisted={this.state.blacklisted} />
+
+      {/* TODO: When should this be shown? */}
+      <ShareMetacard {...this.props} show={false} />
+      <ExpandMetacard {...this.props} />
+
+      <div className="is-divider composed-menu" />
+
       <DownloadProduct {...this.props} />
       <CreateLocationSearch {...this.props} />
       <ExportActions {...this.props} />
+
       {this.props.extensions && (
         <MarionetteRegionContainer
           className="composed-menu interaction-extensions"
