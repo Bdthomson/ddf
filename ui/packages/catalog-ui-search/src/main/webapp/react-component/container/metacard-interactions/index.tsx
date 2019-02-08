@@ -17,7 +17,6 @@ import { hot } from 'react-hot-loader'
 
 import * as CqlUtils from '../../../js/CQLUtils'
 
-import * as CustomElements from '../../../js/CustomElements'
 import styled from '../../../react-component/styles/styled-components'
 
 import * as QueryConfirmationView from '../../../component/confirmation/query/confirmation.query.view'
@@ -34,21 +33,18 @@ import * as user from '../../../component/singletons/user-instance'
 
 import MarionetteRegionContainer from '../marionette-region-container'
 
+const plugin = require('plugins/metacard-interactions')
+
 const Query = require('../../../js/model/Query')
 const wreqr = require('wreqr')
 
 type Props = {
   model: {} | any
-  el: {} | any
+  onClose: () => void
   extensions: {} | any
   handleShare?: () => void
   categories: { [key: string]: Array<{}> }
 } & WithBackboneProps
-
-type El = {
-  find: (matcher: string) => any
-  toggleClass: (key: string, flag: boolean) => void
-}
 
 type Result = {
   get: (key: any) => any
@@ -73,14 +69,6 @@ type Model = {
   forEach: (result: Result | any) => void
   find: (result: Result | any) => boolean
 } & Array<any>
-
-const withCloseDropdown = (
-  context: Props,
-  action: (context: Props) => void
-) => {
-  context.el.trigger(`closeDropdown.${CustomElements.getNamespace()}`)
-  action(context)
-}
 
 const getGeoLocations = (model: Model) =>
   model.reduce((locationArray: Array<string>, result: Result) => {
@@ -143,6 +131,7 @@ const handleCreateSearch = (context: Props) => {
 }
 
 const handleShow = (context: Props) => {
+  context.onClose()
   const preferences = user.get('user').get('preferences')
   const getResult = (result: Result) =>
     result
@@ -155,6 +144,7 @@ const handleShow = (context: Props) => {
 }
 
 const handleHide = (context: Props) => {
+  context.onClose()
   const preferences = user.get('user').get('preferences')
   const getResult = (result: Result) => ({
     id: result
@@ -172,6 +162,7 @@ const handleHide = (context: Props) => {
 }
 
 const handleExpand = (context: Props) => {
+  context.onClose()
   const id = context.model
     .first()
     .get('metacard')
@@ -186,35 +177,11 @@ const handleExpand = (context: Props) => {
   })
 }
 
-const handleShare = (context: Props) =>
+const handleShare = (context: Props) => {
+  context.onClose()
   context.handleShare && context.handleShare()
-
-const appendCssIfNeeded = (model: Model, el: El) => {
-  const isMixed = model.reduce((accum: number, item: Result) => {
-    if (item.isRemote()) {
-      el.toggleClass('is-remote', true)
-      return ++accum
-    }
-    if (item.isWorkspace()) {
-      el.toggleClass('is-workspace', true)
-      return ++accum
-    }
-    if (item.isResource()) {
-      el.toggleClass('is-resource', true)
-      return ++accum
-    }
-    if (item.isRevision()) {
-      el.toggleClass('is-revision', true)
-      return ++accum
-    }
-    if (item.isDeleted()) {
-      el.toggleClass('is-deleted', true)
-      return ++accum
-    }
-  }, 0)
-
-  el.toggleClass('is-mixed', isMixed > 1)
 }
+
 const isBlacklisted = (model: Model): boolean => {
   const blacklist = user
     .get('user')
@@ -392,8 +359,6 @@ const ExportActions = (props: any) => {
 }
 
 const BlacklistToggle = (props: any) => {
-  const fn = (handler: any) => withCloseDropdown(props, handler)
-
   if (props.blacklisted) {
     return (
       <MetacardInteraction
@@ -401,7 +366,7 @@ const BlacklistToggle = (props: any) => {
         help="Removes from the
               list of results that are hidden from future searches."
         icon="fa fa-eye"
-        onClick={() => fn(handleShow)}
+        onClick={() => handleShow(props)}
       />
     )
   } else {
@@ -412,15 +377,13 @@ const BlacklistToggle = (props: any) => {
               of results that will be hidden from future searches.  To clear this list,
               click the Settings icon, select Hidden, then choose to unhide the record."
         icon="fa fa-eye-slash"
-        onClick={() => fn(handleHide)}
+        onClick={() => handleHide(props)}
       />
     )
   }
 }
 
 const ExpandMetacard = (props: any) => {
-  const fn = (handler: any) => withCloseDropdown(props, handler)
-
   const isRouted = router && router.toJSON().name === 'openMetacard'
 
   if (isRouted || props.model.length > 1) {
@@ -434,7 +397,7 @@ const ExpandMetacard = (props: any) => {
             view that only focuses on this particular result.  Bookmarking it will allow
             you to come back to this result directly."
       icon="fa fa-expand"
-      onClick={() => fn(handleExpand)}
+      onClick={() => handleExpand(props)}
     />
   )
 }
@@ -445,14 +408,12 @@ const ShareMetacard = (props: any) => {
     return null
   }
 
-  const fn = (handler: any) => withCloseDropdown(props, handler)
-
   return (
     <MetacardInteraction
       text="Share Metacard"
       icon="fa fa-share-alt"
       help="Copies the URL that leads to this result directly to your clipboard."
-      onClick={() => fn(handleShare)}
+      onClick={() => handleShare(props)}
     />
   )
 }
@@ -461,6 +422,19 @@ type State = {
   blacklisted: Boolean
   model: any
 }
+
+const Divider = () => <div className="is-divider composed-menu" />
+
+const interactions = plugin([
+  AddToList,
+  BlacklistToggle,
+  ShareMetacard,
+  ExpandMetacard,
+  Divider,
+  DownloadProduct,
+  CreateLocationSearch,
+  ExportActions,
+])
 
 class MetacardInteractions extends React.Component<Props, State> {
   constructor(props: Props) {
@@ -471,8 +445,6 @@ class MetacardInteractions extends React.Component<Props, State> {
     }
   }
   componentDidMount = () => {
-    appendCssIfNeeded(this.props.model, this.props.el)
-
     const setState = (model: Model) => this.setState({ model: model })
 
     this.props.listenTo(
@@ -493,26 +465,15 @@ class MetacardInteractions extends React.Component<Props, State> {
 
   render = () => (
     <>
-      <AddToList {...this.props} />
-      <BlacklistToggle {...this.props} blacklisted={this.state.blacklisted} />
-
-      {/* TODO: When should this be shown? */}
-      <ShareMetacard {...this.props} show={false} />
-      <ExpandMetacard {...this.props} />
-
-      <div className="is-divider composed-menu" />
-
-      <DownloadProduct {...this.props} />
-      <CreateLocationSearch {...this.props} />
-      <ExportActions {...this.props} />
-
-      {this.props.extensions && (
-        <MarionetteRegionContainer
-          className="composed-menu interaction-extensions"
-          view={this.props.extensions}
-          viewOptions={{ mode: this.props.model }}
-        />
-      )}
+      {interactions.map((Component: any, i: number) => {
+        return (
+          <Component
+            key={i}
+            {...this.props}
+            blacklisted={this.state.blacklisted}
+          />
+        )
+      })}
     </>
   )
 }
