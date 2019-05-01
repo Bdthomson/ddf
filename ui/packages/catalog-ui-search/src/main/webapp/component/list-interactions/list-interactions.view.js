@@ -70,8 +70,7 @@ module.exports = Marionette.ItemView.extend({
     )
   },
   triggerRun() {
-    const ids = this.model.get('list.bookmarks')
-    this.model.get('query').startTieredSearch(ids)
+    this.model.get('query').startSearch()
   },
   triggerCancel() {
     this.model.get('query').cancelCurrentSearches()

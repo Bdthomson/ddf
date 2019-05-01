@@ -270,11 +270,6 @@ Query.Model = PartialAssociatedModel.extend({
   isOutdated() {
     return this.get('isOutdated')
   },
-  startTieredSearchIfOutdated(ids) {
-    if (this.isOutdated()) {
-      this.startTieredSearch(ids)
-    }
-  },
   startSearchIfOutdated() {
     if (this.isOutdated()) {
       this.startSearch()
@@ -284,23 +279,6 @@ Query.Model = PartialAssociatedModel.extend({
     this.dispatch(clearPages())
     this.set('serverPageIndex', serverPageIndex(this.state))
     this.startSearch(options)
-  },
-  startTieredSearch: function(ids) {
-    this.set('federation', 'local')
-    this.startSearch(undefined, searches => {
-      $.when(...searches).then(() => {
-        const queryResponse = this.get('result')
-        if (queryResponse && queryResponse.isUnmerged()) {
-          this.listenToOnce(
-            queryResponse,
-            'change:merged',
-            handleTieredSearchLocalFinish.bind(this, ids)
-          )
-        } else {
-          handleTieredSearchLocalFinish.call(this, ids)
-        }
-      })
-    })
   },
   preQueryPlugin: async function(data) {
     return data
