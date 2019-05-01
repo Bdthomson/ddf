@@ -25,7 +25,14 @@ const user = require('../../component/singletons/user-instance.js')
 const _merge = require('lodash/merge')
 require('backbone-associations')
 import PartialAssociatedModel from '../../js/extensions/backbone.partialAssociatedModel'
+import { combineReducers, createStore, applyMiddleware, compose } from 'redux'
 const plugin = require('plugins/query')
+
+// Expose redux dev tools if not in production
+const composeEnhancers =
+  process.env.NODE_ENV === 'production'
+    ? compose
+    : window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
 
 var Query = {}
 
@@ -75,7 +82,74 @@ const handleTieredSearchLocalFinish = function(ids) {
   this.startSearch({ results, status })
 }
 
-const reducer = (state = [{}], action) => {
+// Current
+// Page size of 3
+// [{src1: 1, src2: 2}, {src1: 1, src2: 0}]
+
+/*
+  {
+    mergedResults: [...ids],
+    sourceStatus: {
+      [id]: {
+        count: 0,
+        elapsed: 0,
+        hits: 10,
+        status: 'pending' | 'success' | 'error',
+        results: []
+      },
+    },
+  }
+
+  getResultPage(state, pageNumber) - subset of merged results
+  hasResultUpdates(state) - do we have any updates from any sources that can be merged in
+
+*/
+// FETCH_RESULTS
+// 
+const mergedResults = (state = [], { type, payload }) => {
+  switch (type) {
+    case 'MERGE_RESULTS':
+      return payload
+    default:
+      return state
+  }
+}
+
+const sources = (state = [], {type, payload}) => {
+  switch (type) {
+    case 'START_SEARCH':
+      return payload
+    default:
+      return state
+  }
+}
+
+const sourceResults = (state = {}, {type, payload}) => {
+  switch (type) {
+    case 'SOURCE_RETURNED':
+      const status = payload.status
+      return { ...state, [status.id]: payload.results }
+    default:
+      return state
+  }
+}
+
+const sourceStatus = (state = {}, {type, payload}) => {
+  switch (type) {
+    case 'SOURCE_RETURNED':
+      const status = payload.status
+      return { ...state, [status.id]: status }
+    default:
+      return state
+  }
+}
+
+const startSearch = (payload) => ({ type: 'START_SEARCH', payload })
+const stopSearch = (payload) => ({ type: 'STOP_SEARCH', payload })
+const mergeResults = (payload) => ({ type: 'MERGE_RESULTS', payload })
+const sourceReturned = (payload) => ({ type: 'SOURCE_RETURNED', payload})
+
+const paging = (state = [{}], action) => {
   switch (action.type) {
     case 'CLEAR_PAGES':
       return [{}]
@@ -100,8 +174,10 @@ const reducer = (state = [{}], action) => {
   }
 }
 
+const rootReducer = combineReducers({ paging, sources, sourceStatus, sourceResults })
+
 const currentIndexForSource = state => {
-  return state.reduce((counts, page) => {
+  return state.paging.reduce((counts, page) => {
     return Object.keys(page).reduce((counts, src) => {
       const resultCount = page[src]
 
@@ -115,7 +191,7 @@ const currentIndexForSource = state => {
   }, {})
 }
 
-const serverPageIndex = state => state.length
+const serverPageIndex = state => state.paging.length
 
 const previousPage = () => ({ type: 'PREVIOUS_PAGE' })
 const nextPage = () => ({ type: 'NEXT_PAGE' })
@@ -132,7 +208,8 @@ Query.Model = PartialAssociatedModel.extend({
     },
   ],
   dispatch(action) {
-    this.state = reducer(this.state, action)
+    this.store.dispatch(action)
+    this.state = this.store.getState()
   },
   set: function(data, ...args) {
     if (
@@ -207,7 +284,8 @@ Query.Model = PartialAssociatedModel.extend({
   },
   initialize: function() {
     this.currentIndexForSource = {}
-    this.state = [{}]
+    this.store = createStore(rootReducer, composeEnhancers(applyMiddleware()))
+    this.state = this.store.getState()
 
     _.bindAll.apply(_, [this].concat(_.functions(this))) // underscore bindAll does not take array arg
     this.set('id', this.getId())
@@ -375,6 +453,8 @@ Query.Model = PartialAssociatedModel.extend({
         return
       }
 
+      this.dispatch(startSearch(sources))
+
       this.currentSearches = currentSearches.map(search => {
         return result.fetch({
           customErrorHandling: true,
@@ -385,11 +465,12 @@ Query.Model = PartialAssociatedModel.extend({
           method: 'POST',
           processData: false,
           timeout: properties.timeout,
-          success: function(model, response, options) {
+          success: (model, response, options) => {
             response.options = options
             if (options.resort === true) {
               model.get('results').sort()
             }
+            this.dispatch(sourceReturned(response))
           },
           error: function(model, response, options) {
             var srcStatus = result.get('status').get(search.src)
