@@ -64,67 +64,47 @@ function limitToHistoric(cqlString) {
   })
 }
 
-const handleTieredSearchLocalFinish = function(ids) {
-  const results = this.get('result')
-    .get('results')
-    .toJSON()
+const { comparator } = require('./ResultSort.js')
 
-  const status = this.get('result')
-    .get('status')
-    .toJSON()
+const mergeSourceResults = (state) => {
+  const { sorts } = state
 
-  const resultIds = results.map(result => result.metacard.id)
-  const missingResult = ids.some(id => !resultIds.includes(id))
-  if (!missingResult) {
-    return
-  }
-  this.set('federation', 'enterprise')
-  this.startSearch({ results, status })
+  const results = Object.values(state.sourceResults)
+    .reduce((a, b) => a.concat(b), [])
+    .sort(comparator(sorts))
+
+  return results
 }
 
-// Current
-// Page size of 3
-// [{src1: 1, src2: 2}, {src1: 1, src2: 0}]
-
-/*
-  {
-    mergedResults: [...ids],
-    sourceStatus: {
-      [id]: {
-        count: 0,
-        elapsed: 0,
-        hits: 10,
-        status: 'pending' | 'success' | 'error',
-        results: []
-      },
-    },
+const mergedResults = (state = [], { type, payload, rootState }) => {
+  if (type == 'MERGE_RESULTS' || (state.length === 0 && type === 'SOURCE_RETURNED')) {
+    return mergeSourceResults(rootState)
   }
-
-  getResultPage(state, pageNumber) - subset of merged results
-  hasResultUpdates(state) - do we have any updates from any sources that can be merged in
-
-*/
-// FETCH_RESULTS
-// 
-const mergedResults = (state = [], { type, payload }) => {
-  switch (type) {
-    case 'MERGE_RESULTS':
-      return payload
-    default:
-      return state
-  }
+  return state
 }
 
-const sources = (state = [], {type, payload}) => {
+const sorts = (state = [], { type, payload }) => {
   switch (type) {
     case 'START_SEARCH':
-      return payload
+      return payload[0].sorts
     default:
       return state
   }
 }
 
-const sourceResults = (state = {}, {type, payload}) => {
+const currentSearches = (state = [], { type, payload }) => {
+  switch (type) {
+    case 'START_SEARCH':
+      return payload.reduce((searches, search) => {
+        searches[search.src] = search
+        return searches
+      }, {})
+    default:
+      return state
+  }
+}
+
+const sourceResults = (state = {}, { type, payload }) => {
   switch (type) {
     case 'SOURCE_RETURNED':
       const status = payload.status
@@ -134,7 +114,7 @@ const sourceResults = (state = {}, {type, payload}) => {
   }
 }
 
-const sourceStatus = (state = {}, {type, payload}) => {
+const sourceStatus = (state = {}, { type, payload }) => {
   switch (type) {
     case 'SOURCE_RETURNED':
       const status = payload.status
@@ -144,14 +124,14 @@ const sourceStatus = (state = {}, {type, payload}) => {
   }
 }
 
-const startSearch = (payload) => ({ type: 'START_SEARCH', payload })
-const stopSearch = (payload) => ({ type: 'STOP_SEARCH', payload })
-const mergeResults = (payload) => ({ type: 'MERGE_RESULTS', payload })
-const sourceReturned = (payload) => ({ type: 'SOURCE_RETURNED', payload})
+const startSearch = payload => ({ type: 'START_SEARCH', payload })
+const stopSearch = payload => ({ type: 'STOP_SEARCH', payload })
+const mergeResults = payload => ({ type: 'MERGE_RESULTS', payload })
+const sourceReturned = payload => ({ type: 'SOURCE_RETURNED', payload })
 
 const paging = (state = [{}], action) => {
   switch (action.type) {
-    case 'CLEAR_PAGES':
+    case 'START_SEARCH':
       return [{}]
     case 'NEXT_PAGE':
       return state.concat({})
@@ -174,7 +154,18 @@ const paging = (state = [{}], action) => {
   }
 }
 
-const rootReducer = combineReducers({ paging, sources, sourceStatus, sourceResults })
+const reducers = combineReducers({
+  paging,
+  sorts,
+  currentSearches,
+  sourceStatus,
+  sourceResults,
+  mergedResults,
+})
+
+const rootReducer = (state = undefined, action) => {
+  return reducers(state, { ...action, rootState: state })
+}
 
 const currentIndexForSource = state => {
   return state.paging.reduce((counts, page) => {
@@ -195,7 +186,6 @@ const serverPageIndex = state => state.paging.length
 
 const previousPage = () => ({ type: 'PREVIOUS_PAGE' })
 const nextPage = () => ({ type: 'NEXT_PAGE' })
-const clearPages = () => ({ type: 'CLEAR_PAGES' })
 const updateResults = payload => ({ type: 'UPDATE_RESULTS', payload })
 
 Query.Model = PartialAssociatedModel.extend({
@@ -354,7 +344,6 @@ Query.Model = PartialAssociatedModel.extend({
     }
   },
   startSearchFromFirstPage: function(options) {
-    this.dispatch(clearPages())
     this.set('serverPageIndex', serverPageIndex(this.state))
     this.startSearch(options)
   },
@@ -412,6 +401,11 @@ Query.Model = PartialAssociatedModel.extend({
       })
     }
 
+    result.mergeNewResults = () => {
+      this.dispatch(mergeResults())
+      return QueryResponse.prototype.mergeNewResults.call(result)
+    }
+
     result.set('initiated', Date.now())
     result.set('resultCountOnly', options.resultCountOnly)
     ResultSort.sortResults(this.get('sorts'), result.get('results'))
@@ -453,7 +447,7 @@ Query.Model = PartialAssociatedModel.extend({
         return
       }
 
-      this.dispatch(startSearch(sources))
+      this.dispatch(startSearch(currentSearches))
 
       this.currentSearches = currentSearches.map(search => {
         return result.fetch({

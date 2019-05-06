@@ -14,6 +14,19 @@ var metacardDefinitions = require('../../component/singletons/metacard-definitio
 
 require('backbone-associations')
 
+const getIn = (model, path) =>
+  path.reduce((v, k) => {
+    if (v === undefined) return
+    if (typeof k === 'string') {
+      if (typeof v.get === 'function') return v.get(k)
+      if (typeof v === 'object') return v[k]
+    }
+    if (typeof k === 'number') {
+      if (typeof v.at === 'function') return v.at(k)
+      if (Array.isArray(v)) return v[k]
+    }
+  }, model)
+
 function parseMultiValue(value) {
   if (value && value.constructor === Array) {
     return value[0]
@@ -55,8 +68,8 @@ function compareValues(aVal, bVal, sorting) {
 }
 
 function checkSortValue(a, b, sorting) {
-  var aVal = parseMultiValue(a.get('metacard>properties>' + sorting.attribute))
-  var bVal = parseMultiValue(b.get('metacard>properties>' + sorting.attribute))
+  var aVal = parseMultiValue(getIn(a, ['metacard', 'properties', sorting.attribute]))
+  var bVal = parseMultiValue(getIn(b, ['metacard', 'properties', sorting.attribute]))
   if (isEmpty(aVal) && isEmpty(bVal)) {
     return 0
   }
@@ -69,31 +82,34 @@ function checkSortValue(a, b, sorting) {
   return compareValues(aVal, bVal, sorting)
 }
 
-function doSort(sorting, collection) {
-  collection.comparator = function(a, b) {
-    var sortValue = 0
-    for (var i = 0; i <= sorting.length - 1; i++) {
-      var sortField = sorting[i].attribute
-      var sortOrder = sorting[i].direction === 'descending' ? -1 : 1
-      switch (sortField) {
-        case 'RELEVANCE':
-          sortValue = sortOrder * (a.get('relevance') - b.get('relevance'))
-          break
-        case 'DISTANCE':
-          sortValue = sortOrder * (a.get('distance') - b.get('distance'))
-          break
-        default:
-          sortValue = checkSortValue(a, b, sorting[i])
-      }
-      if (sortValue !== 0) {
+const comparator = (sorting) => (a, b) => {
+  var sortValue = 0
+  for (var i = 0; i <= sorting.length - 1; i++) {
+    var sortField = sorting[i].attribute
+    var sortOrder = sorting[i].direction === 'descending' ? -1 : 1
+    switch (sortField) {
+      case 'RELEVANCE':
+        sortValue = sortOrder * (getIn(a, ['relevance']) - getIn(g, ['relevance']))
         break
-      }
+      case 'DISTANCE':
+        sortValue = sortOrder * (get(a, ['distance']) - getIn(b, ['distance']))
+        break
+      default:
+        sortValue = checkSortValue(a, b, sorting[i])
     }
-    return sortValue
+    if (sortValue !== 0) {
+      break
+    }
   }
+  return sortValue
+}
+
+function doSort(sorting, collection) {
+  collection.comparator = comparator(sorting)
   collection.sort()
 }
 
 module.exports = {
+  comparator,
   sortResults: doSort,
 }
