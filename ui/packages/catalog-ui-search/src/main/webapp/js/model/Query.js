@@ -77,9 +77,14 @@ const mergeSourceResults = (state) => {
 }
 
 const mergedResults = (state = [], { type, payload, rootState }) => {
-  if (type == 'MERGE_RESULTS' || (state.length === 0 && type === 'SOURCE_RETURNED')) {
+  if (type === 'START_SEARCH') {
+    return []
+  }
+
+  if (type == 'MERGE_RESULTS' || (type === 'SOURCE_RETURNED' && state.length === 0)) {
     return mergeSourceResults(rootState)
   }
+
   return state
 }
 
@@ -282,7 +287,7 @@ Query.Model = PartialAssociatedModel.extend({
     this.listenTo(this, 'change:cql', () => this.set('isOutdated', true))
 
     const sync = () => {
-      this.dispatch(updateResults(this.get('result').toJSON()))
+      /*this.dispatch(updateResults(this.get('result').toJSON()))
       this.set('serverPageIndex', serverPageIndex(this.state))
 
       const totalHits = this.get('result')
@@ -291,7 +296,7 @@ Query.Model = PartialAssociatedModel.extend({
           return total + status.get('hits')
         }, 0)
 
-      this.set('totalHits', totalHits)
+      this.set('totalHits', totalHits)*/
     }
 
     this.listenTo(this, 'change:result', () => {
