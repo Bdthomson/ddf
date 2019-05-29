@@ -142,7 +142,8 @@ const paging = (state = [{}], action) => {
       return state.concat({})
     case 'PREVIOUS_PAGE':
       return state.slice(0, -1)
-    case 'UPDATE_RESULTS':
+    case 'SOURCE_RETURNED':
+      const lastPage = {...state[state.length - 1]}
       const srcs = action.payload.results
         .map(({ src }) => src)
         .reduce((counts, src) => {
@@ -151,7 +152,7 @@ const paging = (state = [{}], action) => {
           }
           counts[src] += 1
           return counts
-        }, {})
+        }, lastPage)
 
       return state.slice(0, -1).concat(srcs)
     default:
@@ -205,6 +206,7 @@ Query.Model = PartialAssociatedModel.extend({
   dispatch(action) {
     this.store.dispatch(action)
     this.state = this.store.getState()
+    this.syncWithStore()
   },
   set: function(data, ...args) {
     if (
@@ -305,6 +307,17 @@ Query.Model = PartialAssociatedModel.extend({
         this.listenTo(this.get('result'), 'change', sync)
       }
     })
+  },
+  syncWithStore() {
+    this.set('serverPageIndex', serverPageIndex(this.state))
+
+    const totalHits = this.get('result')
+      .get('status')
+      .reduce((total, status) => {
+        return total + status.get('hits')
+      }, 0)
+
+    this.set('totalHits', totalHits)
   },
   buildSearchData: function() {
     var data = this.toJSON()
