@@ -24,6 +24,7 @@ const DropdownModel = require('../dropdown/dropdown.js')
 const DropdownView = require('../dropdown/dropdown.view.js')
 const RelativeTimeView = require('../relative-time/relative-time.view.js')
 const BetweenTimeView = require('../between-time/between-time.view.js')
+const BetweenNumberView =  require('../between-number/between-number.view')
 const ValueModel = require('../value/value.js')
 const properties = require('../../js/properties.js')
 const Common = require('../../js/Common.js')
@@ -56,6 +57,11 @@ const generatePropertyJSON = (value, type, comparator) => {
     propertyJSON.placeholder = 'Use * for wildcard.'
   }
 
+  if (comparator === 'NUMBER_RANGE') {
+    propertyJSON.type = 'NUMBER_RANGE'
+    propertyJSON.label = 'TO'
+  }
+
   if (comparator === 'NEAR') {
     propertyJSON.type = 'NEAR'
     propertyJSON.param = 'within'
@@ -81,6 +87,9 @@ const determineView = comparator => {
     case 'BETWEEN':
       necessaryView = BetweenTimeView
       break
+    case 'NUMBER_RANGE':
+      necessaryView = BetweenNumberView
+      break
     default:
       necessaryView = MultivalueView
       break
@@ -103,6 +112,7 @@ function comparatorToCQL() {
     '=': '=',
     '<=': '<=',
     '>=': '>=',
+    'NUMBER_RANGE': 'BETWEEN'
   }
 }
 
@@ -284,6 +294,7 @@ the provided value."
           this.model.set('comparator', '=')
         }
         break
+      case 'NUMBER_RANGE':
       case 'LONG':
       case 'DOUBLE':
       case 'FLOAT':
