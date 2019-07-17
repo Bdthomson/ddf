@@ -24,7 +24,7 @@ const DropdownModel = require('../dropdown/dropdown.js')
 const DropdownView = require('../dropdown/dropdown.view.js')
 const RelativeTimeView = require('../relative-time/relative-time.view.js')
 const BetweenTimeView = require('../between-time/between-time.view.js')
-const BetweenNumberView =  require('../between-number/between-number.view')
+const BetweenNumberView = require('../between-number/between-number.view')
 const ValueModel = require('../value/value.js')
 const properties = require('../../js/properties.js')
 const Common = require('../../js/Common.js')
@@ -57,9 +57,8 @@ const generatePropertyJSON = (value, type, comparator) => {
     propertyJSON.placeholder = 'Use * for wildcard.'
   }
 
-  if (comparator === 'NUMBER_RANGE') {
-    propertyJSON.type = 'NUMBER_RANGE'
-    propertyJSON.label = 'TO'
+  if (comparator === 'RANGE') {
+    propertyJSON.type = 'RANGE'
   }
 
   if (comparator === 'NEAR') {
@@ -87,7 +86,7 @@ const determineView = comparator => {
     case 'BETWEEN':
       necessaryView = BetweenTimeView
       break
-    case 'NUMBER_RANGE':
+    case 'RANGE':
       necessaryView = BetweenNumberView
       break
     default:
@@ -112,7 +111,7 @@ function comparatorToCQL() {
     '=': '=',
     '<=': '<=',
     '>=': '>=',
-    'NUMBER_RANGE': 'BETWEEN'
+    RANGE: 'BETWEEN',
   }
 }
 
@@ -225,6 +224,14 @@ the provided value."
           }
         }
         break
+      case 'RANGE':
+        if (value[0].constructor !== Object) {
+          value[0] = {
+            min: 0,
+            max: value[0],
+          }
+        }
+        break
       case 'INTERSECTS':
       case 'DWITHIN':
         break
@@ -294,7 +301,7 @@ the provided value."
           this.model.set('comparator', '=')
         }
         break
-      case 'NUMBER_RANGE':
+      case 'RANGE':
       case 'LONG':
       case 'DOUBLE':
       case 'FLOAT':
