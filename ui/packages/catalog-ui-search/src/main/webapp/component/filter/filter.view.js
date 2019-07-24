@@ -58,6 +58,7 @@ const generatePropertyJSON = (value, type, comparator) => {
   }
 
   if (comparator === 'RANGE') {
+    propertyJSON.typeOfValues = propertyJSON.type
     propertyJSON.type = 'RANGE'
   }
 
