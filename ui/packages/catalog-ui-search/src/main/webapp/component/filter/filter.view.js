@@ -226,10 +226,10 @@ the provided value."
         }
         break
       case 'RANGE':
-        if (value[0].constructor !== Object) {
+        if (value[0] && value[0].constructor !== Object) {
           value[0] = {
-            min: 0,
-            max: value[0],
+            lower: value[0] || 0,
+            upper: value[0] || 0,
           }
         }
         break
