@@ -280,9 +280,13 @@ the provided value."
   toggleDateClass(toggle) {
     this.$el.toggleClass('is-date', toggle)
   },
+  toggleRangeClass(toggle) {
+    this.$el.toggleClass('is-range', toggle)
+  },
   setDefaultComparator(propertyJSON) {
     this.toggleLocationClass(false)
     this.toggleDateClass(false)
+    this.toggleRangeClass(false)
     const currentComparator = this.model.get('comparator')
     switch (propertyJSON.type) {
       case 'LOCATION':
@@ -303,6 +307,7 @@ the provided value."
         }
         break
       case 'RANGE':
+        this.toggleRangeClass(true)
       case 'LONG':
       case 'DOUBLE':
       case 'FLOAT':
