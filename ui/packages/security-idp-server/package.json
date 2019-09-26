@@ -26,7 +26,7 @@
     "grunt-express-server": "0.5.3",
     "load-grunt-tasks": "3.5.2",
     "which": "1.0.5",
-    "@connexta/ace": "*"
+    "@connexta/ace": "git://github.com/connexta/ace.git#f51c1b59ec73fea2c196cf5b59eaf4ad48dddcee"
   },
   "dependencies": {
     "lodash": "4.17.5",

@@ -34,7 +34,7 @@
     "mocha": "1.20.0",
     "requirejs": "2.3.3",
     "underscore": "1.7.0",
-    "@connexta/ace": "*"
+    "@connexta/ace": "git://github.com/connexta/ace.git#f51c1b59ec73fea2c196cf5b59eaf4ad48dddcee"
   },
   "dependencies": {
     "lodash": "4.17.5",
