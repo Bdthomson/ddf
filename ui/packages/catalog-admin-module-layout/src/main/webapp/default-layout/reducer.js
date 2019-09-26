@@ -33,6 +33,8 @@ import 'font-awesome/css/font-awesome.css'
 import 'golden-layout/src/css/goldenlayout-base.css'
 import 'golden-layout/src/css/goldenlayout-dark-theme.css'
 
+const createReactClass = require('create-react-class')
+
 window.React = React
 window.ReactDOM = ReactDOM
 const GoldenLayout = require('golden-layout')
@@ -320,7 +322,7 @@ const setupEditor = (dispatch, getState) => {
   visualizations.forEach(function(component) {
     layout.registerComponent(
       component.name,
-      React.createClass({
+      createReactClass({
         render: function() {
           return (
             <MuiThemeProvider muiTheme={getMuiTheme(themes['admin'])}>
@@ -348,7 +350,7 @@ const setupEditor = (dispatch, getState) => {
 
   layout.init()
 
-  const LayoutOption = React.createClass({
+  const LayoutOption = createReactClass({
     componentWillMount: function() {
       this.setState({
         component: {
@@ -384,7 +386,7 @@ const setupEditor = (dispatch, getState) => {
       )
     },
   })
-  const MenuList = React.createClass({
+  const MenuList = createReactClass({
     render: function() {
       return (
         <MuiThemeProvider muiTheme={getMuiTheme(themes['admin'])}>

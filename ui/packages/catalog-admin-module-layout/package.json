@@ -35,25 +35,25 @@
     "redux": "^3.5.2"
   },
   "dependencies": {
+    "create-react-class": "^15.6.3",
     "es6-promise": "4.0.5",
-    "flexbox-react": "4.3.1",
+    "flexbox-react": "4.3.3",
+    "font-awesome": "4.7.0",
+    "golden-layout": "1.5.8",
     "immutable": "3.8.1",
     "material-ui": "0.17.4",
-    "react": "15.4.2",
+    "react": "16.8.6",
     "react-ace": "4.3.0",
-    "react-dom": "15.4.2",
-    "react-redux": "5.0.2",
-    "react-router": "3.0.2",
-    "react-tap-event-plugin": "2.0.1",
+    "react-dom": "16.8.6",
+    "react-fontawesome": "1.6.1",
+    "react-redux": "5.0.7",
+    "react-router": "3.2.1",
     "redux": "3.6.0",
     "redux-immutable": "3.0.11",
     "redux-thunk": "2.2.0",
-    "golden-layout": "1.5.8",
-    "font-awesome": "4.7.0",
-    "react-fontawesome": "1.6.1",
+    "traverse": "0.6.6",
     "validator": "7.0.0",
-    "whatwg-fetch": "2.0.2",
-    "traverse": "0.6.6"
+    "whatwg-fetch": "2.0.2"
   },
   "devDependencies": {
     "chai": "3.5.0",
@@ -61,7 +61,17 @@
     "istanbul": "0.4.5",
     "opn-cli": "3.1.0",
     "react-addons-test-utils": "15.4.2",
-    "@connexta/ace": "git://github.com/connexta/ace.git#f51c1b59ec73fea2c196cf5b59eaf4ad48dddcee"
+    "@connexta/ace": "git://github.com/connexta/ace.git#6f1c389898a1ee94aac54b9e7d5b1073a8b5853b"
+  },
+  "ace": {
+    "whitelist": [],
+    "resolve": [
+      "react"
+    ]
+  },
+  "resolutions": {
+    "react": "16.8.6",
+    "react-dom": "16.8.6"
   },
   "files": [
     "target/webapp",
