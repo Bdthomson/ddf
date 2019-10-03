@@ -12,37 +12,27 @@
  * <http://www.gnu.org/licenses/lgpl.html>.
  *
  **/
-import React from 'react'
-import { connect } from 'react-redux'
-import { Card, CardMedia, CardTitle, CardText } from 'material-ui/Card'
-import CircularProgress from 'material-ui/CircularProgress'
-import FlatButton from 'material-ui/FlatButton'
-import Flexbox from 'flexbox-react'
-import RaisedButton from 'material-ui/RaisedButton'
-import Snackbar from 'material-ui/Snackbar'
-import muiThemeable from 'material-ui/styles/muiThemeable'
-import { Toolbar, ToolbarGroup, ToolbarTitle } from 'material-ui/Toolbar'
-import Mount from 'react-mount'
-import AceEditor from 'react-ace'
+import CircularProgress from '@material-ui/core/CircularProgress'
+import FlatButton from '@material-ui/core/FlatButton'
 import 'brace/mode/json'
 import 'brace/theme/github'
-
+import Flexbox from 'flexbox-react'
+import { Card, CardMedia, CardText, CardTitle } from '@material-ui/core/Card'
+import RaisedButton from '@material-ui/core/RaisedButton'
+import Snackbar from '@material-ui/core/Snackbar'
+// import muiThemeable from 'material-ui/styles/muiThemeable'
+import { Toolbar, ToolbarGroup, ToolbarTitle } from '@material-ui/core/Toolbar'
+import React from 'react'
+import AceEditor from 'react-ace'
+import Mount from 'react-mount'
+import { connect } from 'react-redux'
 import {
   // actions
   fetch,
-  update,
-  save,
-  rendered,
-  validate,
-  reset,
-  message,
-
   // selectors
-  getBuffer,
-  isLoading,
-  hasChanges,
-  getMessage,
+  getBuffer, getMessage, hasChanges, isLoading, message, rendered, reset, save, update, validate
 } from './reducer'
+
 
 const submittingStyle = {
   position: 'absolute',

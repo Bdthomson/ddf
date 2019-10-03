@@ -35,13 +35,13 @@
     "redux": "^3.5.2"
   },
   "dependencies": {
+    "@material-ui/core": "4.3.1",
     "create-react-class": "^15.6.3",
     "es6-promise": "4.0.5",
     "flexbox-react": "4.3.3",
     "font-awesome": "4.7.0",
     "golden-layout": "1.5.8",
     "immutable": "3.8.1",
-    "material-ui": "0.17.4",
     "react": "16.8.6",
     "react-ace": "4.3.0",
     "react-dom": "16.8.6",
