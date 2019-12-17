@@ -13,112 +13,36 @@
  *
  **/
 const _get = require('lodash/get')
-const _map = {
-  default: {
-    class: 'fa fa-file',
+
+const iconProperties = [
+  'default=fa fa-file,f15b,FontAwesome,12px',
+  'interactive=fa fa-gamepad,f11b,FontAwesome,12px',
+  'dataset=fa fa-database,f1c0,FontAwesome,12px',
+  'video=fa fa-video-camera,f03d,FontAwesome,12px',
+  'collection=fa fa-folder-open,f1c0,FontAwesome,12px',
+  'event=fa fa-bolt,f0e7,FontAwesome,12px',
+  'service=fa fa-globe,f0ac,FontAwesome,12px',
+  'software=fa fa-terminal,f120,FontAwesome,12px',
+  'sound=fa fa-music,f001,FontAwesome,12px',
+  'text=fa fa-file-text,f15c,FontAwesome,12px',
+  'document=fa fa-file,f15b,FontAwesome,12px',
+  'image=fa fa-camera,f030,FontAwesome,12px',
+  'track=fa fa-thumb-tack,f08d,FontAwesome,12px',
+]
+
+const _map = iconProperties.reduce((totalIconMap, iconConfig) => {
+  const [key, config] = iconConfig.split('=')
+  const [className, code, font, size] = config.split(',')
+  totalIconMap[key] = {
+    class: className,
     style: {
-      code: 'f15b',
-      font: 'FontAwesome',
-      size: '12px',
+      code,
+      font,
+      size,
     },
-  },
-  interactive: {
-    class: 'fa fa-gamepad',
-    style: {
-      code: 'f11b',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  dataset: {
-    class: 'fa fa-database',
-    style: {
-      code: 'f1c0',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  video: {
-    class: 'fa fa-video-camera',
-    style: {
-      code: 'f03d',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  collection: {
-    class: 'fa fa-folder-open',
-    style: {
-      code: 'f07c',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  event: {
-    class: 'fa fa-bolt',
-    style: {
-      code: 'f0e7',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  service: {
-    class: 'fa fa-globe',
-    style: {
-      code: 'f0ac',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  software: {
-    class: 'fa fa-terminal',
-    style: {
-      code: 'f120',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  sound: {
-    class: 'fa fa-music',
-    style: {
-      code: 'f001',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  text: {
-    class: 'fa fa-file-text',
-    style: {
-      code: 'f15c',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  document: {
-    class: 'fa fa-file',
-    style: {
-      code: 'f15b',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  image: {
-    class: 'fa fa-camera',
-    style: {
-      code: 'f030',
-      font: 'FontAwesome',
-      size: '12px',
-    },
-  },
-  track: {
-    class: 'fa fa-thumb-tack',
-    style: {
-      code: 'f08d',
-      font: 'FontAwesome',
-      size: '15px',
-    },
-  },
-}
+  }
+  return totalIconMap
+}, {})
 
 /* Maps top-level mime type category names to the closest icon. */
 const _mimeMap = {
