@@ -13,36 +13,20 @@
  *
  **/
 const _get = require('lodash/get')
+const properties = require('../js/properties')
 
-const iconProperties = [
-  'default=fa fa-file,f15b,FontAwesome,12px',
-  'interactive=fa fa-gamepad,f11b,FontAwesome,12px',
-  'dataset=fa fa-database,f1c0,FontAwesome,12px',
-  'video=fa fa-video-camera,f03d,FontAwesome,12px',
-  'collection=fa fa-folder-open,f1c0,FontAwesome,12px',
-  'event=fa fa-bolt,f0e7,FontAwesome,12px',
-  'service=fa fa-globe,f0ac,FontAwesome,12px',
-  'software=fa fa-terminal,f120,FontAwesome,12px',
-  'sound=fa fa-music,f001,FontAwesome,12px',
-  'text=fa fa-file-text,f15c,FontAwesome,12px',
-  'document=fa fa-file,f15b,FontAwesome,12px',
-  'image=fa fa-camera,f030,FontAwesome,12px',
-  'track=fa fa-thumb-tack,f08d,FontAwesome,12px',
-]
-
-const _map = iconProperties.reduce((totalIconMap, iconConfig) => {
-  const [key, config] = iconConfig.split('=')
-  const [className, code, font, size] = config.split(',')
-  totalIconMap[key] = {
-    class: className,
-    style: {
-      code,
-      font,
-      size,
-    },
+const _map = Object.keys(properties.iconConfig).reduce(
+  (totalIconMap, iconConfigKey) => {
+    const iconProp = properties.iconConfig[iconConfigKey]
+    totalIconMap[iconConfigKey] = {
+      class: iconProp.className,
+      code: iconProp.code,
+      size: iconProp.size,
+      font: iconProp.font,
+    }
+    return totalIconMap
   }
-  return totalIconMap
-}, {})
+, {})
 
 /* Maps top-level mime type category names to the closest icon. */
 const _mimeMap = {
