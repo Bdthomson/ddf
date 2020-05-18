@@ -63,6 +63,8 @@ public class CqlQueryResponse {
 
   private final Boolean userSpellcheckIsOn;
 
+  private final Map<String, Serializable> newStatus;
+
   // Transient so as not to be serialized to/from JSON
   private final transient QueryResponse queryResponse;
 
@@ -150,6 +152,8 @@ public class CqlQueryResponse {
             queryResponse.getProperties().get(SolrMetacardClientImpl.SHOWING_RESULTS_FOR_KEY);
     this.userSpellcheckIsOn =
         (Boolean) queryResponse.getProperties().get(SolrMetacardClientImpl.SPELLCHECK_KEY);
+
+    this.newStatus = (Map<String, Serializable>) queryResponse.getProperties().get("newStatus");
   }
 
   private Map<String, List<FacetValueCount>> getFacetResults(Serializable facetResults) {

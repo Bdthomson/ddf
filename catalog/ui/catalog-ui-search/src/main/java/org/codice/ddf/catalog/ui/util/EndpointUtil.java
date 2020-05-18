@@ -536,6 +536,46 @@ public class EndpointUtil {
       results = retrieveResults(cqlRequest, request, responses);
     }
 
+    final Map<String, Serializable> properties =
+        responses
+            .stream()
+            .filter(Objects::nonNull)
+            .map(QueryResponse::getProperties)
+            .findFirst()
+            .orElse(Collections.emptyMap());
+
+    final String METRICS_SOURCE_ELAPSED_PREFIX = "metrics.source.elapsed.";
+
+    Map<String, Serializable> hitsPerSource =
+        (Map<String, Serializable>)
+            properties.getOrDefault("hitsPerSource", new HashMap<String, Serializable>());
+
+    Map<String, Serializable> elapsedPerSource = new HashMap<>();
+    properties.forEach(
+        (key, value) -> {
+          if (key.startsWith(METRICS_SOURCE_ELAPSED_PREFIX)) {
+            String source = key.substring(METRICS_SOURCE_ELAPSED_PREFIX.length());
+            elapsedPerSource.put(source, value);
+          }
+        });
+
+    Map<String, Integer> countPerSource = new HashMap<>();
+    request.getSourceIds().forEach(id -> countPerSource.put(id, 0));
+
+    results
+        .stream()
+        .map(Result::getMetacard)
+        .forEach(
+            m -> {
+              final String sourceId = (String) m.getSourceId();
+              countPerSource.merge(sourceId, 1, Integer::sum);
+            });
+    Map<String, Map<String, ? extends Serializable>> newStatus = new HashMap<>();
+    newStatus.put("countPerSource", countPerSource);
+    newStatus.put("hitsPerSource", hitsPerSource);
+    newStatus.put("elapsedPerSource", elapsedPerSource);
+    properties.put("newStatus", (Serializable) newStatus);
+
     QueryResponse response =
         new QueryResponseImpl(
             request,
@@ -547,12 +587,7 @@ public class EndpointUtil {
                 .map(QueryResponse::getHits)
                 .findFirst()
                 .orElse(-1L),
-            responses
-                .stream()
-                .filter(Objects::nonNull)
-                .map(QueryResponse::getProperties)
-                .findFirst()
-                .orElse(Collections.emptyMap()),
+            properties,
             responses
                 .stream()
                 .filter(Objects::nonNull)
@@ -585,6 +620,13 @@ public class EndpointUtil {
     return queryResponse.getResults();
   }
 
+  /**
+   * @param cqlRequest CQL Request (only used for count)
+   * @param request Catalog Query Request
+   * @param responses List of responses to append to.
+   * @return A ResultIterable of results, additionally adding the query response to a mutatable list
+   *     for additional context as we query.
+   */
   private List<Result> retrieveResults(
       CqlRequest cqlRequest, QueryRequest request, List<QueryResponse> responses) {
     QueryFunction queryFunction =
