@@ -38,6 +38,7 @@ import ddf.catalog.filter.FilterAdapter;
 import ddf.catalog.filter.FilterBuilder;
 import ddf.catalog.filter.impl.SortByImpl;
 import ddf.catalog.impl.filter.GeoToolsFunctionFactory;
+import ddf.catalog.operation.ProcessingDetails;
 import ddf.catalog.operation.QueryRequest;
 import ddf.catalog.operation.QueryResponse;
 import ddf.catalog.operation.impl.QueryImpl;
@@ -84,6 +85,7 @@ import org.codice.ddf.catalog.ui.config.ConfigurationApplication;
 import org.codice.ddf.catalog.ui.metacard.EntityTooLargeException;
 import org.codice.ddf.catalog.ui.query.cql.CqlQueryResponse;
 import org.codice.ddf.catalog.ui.query.cql.CqlRequest;
+import org.codice.ddf.catalog.ui.query.cql.Status;
 import org.codice.ddf.catalog.ui.transformer.TransformerDescriptors;
 import org.codice.gsonsupport.GsonTypeAdapters.LongDoubleTypeAdapter;
 import org.geotools.factory.CommonFactoryFinder;
@@ -546,21 +548,23 @@ public class EndpointUtil {
 
     final String METRICS_SOURCE_ELAPSED_PREFIX = "metrics.source.elapsed.";
 
-    Map<String, Serializable> hitsPerSource =
-        (Map<String, Serializable>)
-            properties.getOrDefault("hitsPerSource", new HashMap<String, Serializable>());
+    Map<String, Long> hitsPerSource =
+        (Map<String, Long>) properties.getOrDefault("hitsPerSource", new HashMap<String, Long>());
 
-    Map<String, Serializable> elapsedPerSource = new HashMap<>();
+    Map<String, Long> elapsedPerSource = new HashMap<>();
     properties.forEach(
         (key, value) -> {
           if (key.startsWith(METRICS_SOURCE_ELAPSED_PREFIX)) {
             String source = key.substring(METRICS_SOURCE_ELAPSED_PREFIX.length());
-            elapsedPerSource.put(source, value);
+            elapsedPerSource.put(source, new Long((Integer) value));
           }
         });
 
-    Map<String, Integer> countPerSource = new HashMap<>();
-    request.getSourceIds().forEach(id -> countPerSource.put(id, 0));
+    Map<String, Long> countPerSource = new HashMap<>();
+
+    if (request.getSourceIds() != null) {
+      request.getSourceIds().forEach(id -> countPerSource.put(id, 0L));
+    }
 
     results
         .stream()
@@ -568,13 +572,35 @@ public class EndpointUtil {
         .forEach(
             m -> {
               final String sourceId = (String) m.getSourceId();
-              countPerSource.merge(sourceId, 1, Integer::sum);
+              countPerSource.merge(sourceId, 1L, Long::sum);
             });
-    Map<String, Map<String, ? extends Serializable>> newStatus = new HashMap<>();
-    newStatus.put("countPerSource", countPerSource);
-    newStatus.put("hitsPerSource", hitsPerSource);
-    newStatus.put("elapsedPerSource", elapsedPerSource);
-    properties.put("newStatus", (Serializable) newStatus);
+
+    final Set<ProcessingDetails> processingDetails =
+        responses
+            .stream()
+            .filter(Objects::nonNull)
+            .map(QueryResponse::getProcessingDetails)
+            .reduce(
+                new HashSet<>(),
+                (l, r) -> {
+                  l.addAll(r);
+                  return l;
+                });
+
+    Map<String, Status> statusBySource = new HashMap<>();
+    if (request.getSourceIds() != null) {
+      request
+          .getSourceIds()
+          .forEach(
+              id -> {
+                long elapsed = elapsedPerSource.get(id);
+                long count = countPerSource.get(id);
+                long hits = hitsPerSource.get(id);
+                statusBySource.put(id, new Status(id, count, elapsed, hits, processingDetails));
+              });
+    }
+
+    properties.put("statusBySource", (Serializable) statusBySource);
 
     QueryResponse response =
         new QueryResponseImpl(
@@ -588,16 +614,7 @@ public class EndpointUtil {
                 .findFirst()
                 .orElse(-1L),
             properties,
-            responses
-                .stream()
-                .filter(Objects::nonNull)
-                .map(QueryResponse::getProcessingDetails)
-                .reduce(
-                    new HashSet<>(),
-                    (l, r) -> {
-                      l.addAll(r);
-                      return l;
-                    }));
+            processingDetails);
 
     stopwatch.stop();
 

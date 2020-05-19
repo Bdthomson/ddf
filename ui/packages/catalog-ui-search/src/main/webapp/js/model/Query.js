@@ -220,7 +220,7 @@ Query.Model = PartialAssociatedModel.extend({
     this.listenTo(this, 'change:cql', () => this.set('isOutdated', true))
 
     const sync = () => {
-      // this.dispatch(updateResults(this.get('result').toJSON()))  do we need this?  It's expensive
+      this.dispatch(updateResults(this.get('result').toJSON())) //do we need this?  It's expensive
       this.set('serverPageIndex', serverPageIndex(this.state))
 
       const totalHits = this.get('result')
@@ -330,6 +330,8 @@ Query.Model = PartialAssociatedModel.extend({
     if (options.resultCountOnly) {
       data.count = 0
     }
+
+    // Data.sources is set in `buildSearchData` based on which sources you have selected.
     const sources = data.sources
     const initialStatus = sources.map(src => ({
       id: src,
@@ -377,20 +379,43 @@ Query.Model = PartialAssociatedModel.extend({
     }
     const query = this
 
-    const currentSearches = this.preQueryPlugin(
-      sources.map(src => ({
-        ...data,
-        src,
-        start: query.getStartIndexForSource(src),
-        // since the "cache" source will return all cached results, need to
-        // limit the cached results to only those from a selected source
-        cql:
-          src === 'cache'
-            ? CacheSourceSelector.trimCacheSources(cqlString, sources)
-            : cqlString,
-      }))
-    )
+    const localSearchToRun = {
+      ...data,
+      cql: cqlString,
+      srcs: ['ISRI', 'h1', 'h2'],
+      // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
+      start: 1,
+    }
 
+    const federatedSearchToRun = {
+      ...data,
+      cql: cqlString,
+      srcs: [],
+      // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
+      start: 1,
+    }
+
+    const cacheSearchToRun = {
+      ...data,
+      // since the "cache" source will return all cached results, need to
+      // limit the cached results to only those from a selected source. This adds metacard_source to the cql string.
+      cql: CacheSourceSelector.trimCacheSources(cqlString, sources),
+      srcs: ['cache'],
+      // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
+      start: 1,
+    }
+
+    const searchesToRun = [
+      localSearchToRun,
+      federatedSearchToRun,
+      cacheSearchToRun,
+    ].filter(search => search.srcs.length > 0)
+
+    console.log("Executing Searches: ", searchesToRun)
+
+    const currentSearches = this.preQueryPlugin(searchesToRun)
+
+    console.log('About to run queries, state: ', this.state)
     currentSearches.then(currentSearches => {
       if (currentSearches.length === 0) {
         announcement.announce({
@@ -403,6 +428,9 @@ Query.Model = PartialAssociatedModel.extend({
       }
 
       this.currentSearches = currentSearches.map(search => {
+        delete search.sources // This key isn't used on the backend and only serves to confuse those debugging this code.
+
+        // `result` is QueryResponse
         return result.fetch({
           customErrorHandling: true,
           data: JSON.stringify(search),

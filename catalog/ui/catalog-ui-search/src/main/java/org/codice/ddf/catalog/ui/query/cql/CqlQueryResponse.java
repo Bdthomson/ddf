@@ -30,6 +30,7 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.SolrMetacardClientImpl;
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -63,7 +64,7 @@ public class CqlQueryResponse {
 
   private final Boolean userSpellcheckIsOn;
 
-  private final Map<String, Serializable> newStatus;
+  private final Map<String, Status> statusBySource;
 
   // Transient so as not to be serialized to/from JSON
   private final transient QueryResponse queryResponse;
@@ -153,7 +154,15 @@ public class CqlQueryResponse {
     this.userSpellcheckIsOn =
         (Boolean) queryResponse.getProperties().get(SolrMetacardClientImpl.SPELLCHECK_KEY);
 
-    this.newStatus = (Map<String, Serializable>) queryResponse.getProperties().get("newStatus");
+    // This sucks, leaking cache implementation details everywhere
+    if ("cache".equals(source)) {
+      final Map<String, Status> cacheStatus = new HashMap<>();
+      cacheStatus.put("cache", status);
+      this.statusBySource = cacheStatus;
+    } else {
+      this.statusBySource =
+          (Map<String, Status>) queryResponse.getProperties().get("statusBySource");
+    }
   }
 
   private Map<String, List<FacetValueCount>> getFacetResults(Serializable facetResults) {
