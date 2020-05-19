@@ -387,13 +387,13 @@ Query.Model = PartialAssociatedModel.extend({
       start: 1,
     }
 
-    const federatedSearchToRun = {
+    const federatedSearchesToRun = [].filter(a => true).map(source => ({
       ...data,
       cql: cqlString,
-      srcs: [],
+      srcs: [source],
       // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
       start: 1,
-    }
+    }))
 
     const cacheSearchToRun = {
       ...data,
@@ -406,9 +406,9 @@ Query.Model = PartialAssociatedModel.extend({
     }
 
     const searchesToRun = [
-      localSearchToRun,
-      federatedSearchToRun,
       cacheSearchToRun,
+      localSearchToRun,
+      ...federatedSearchesToRun,
     ].filter(search => search.srcs.length > 0)
 
     console.log("Executing Searches: ", searchesToRun)

@@ -264,13 +264,19 @@ module.exports = Backbone.AssociatedModel.extend({
 
     this.addToQueue(resp.results)
 
+    const status = Object.keys(resp.statusBySource).map(id => {
+      return {
+        ...resp.statusBySource[id],
+      }
+    })
+
     return {
       showingResultsForFields: resp.showingResultsForFields,
       didYouMeanFields: resp.didYouMeanFields,
       userSpellcheckIsOn: resp.userSpellcheckIsOn,
       queuedResults: [],
       results: [],
-      status: resp.status,
+      status,
       merged: this.get('merged') === false ? false : resp.results.length === 0,
     }
   },
