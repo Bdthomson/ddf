@@ -133,6 +133,8 @@ public class EndpointUtil {
 
   private static final String ISINJECTED_KEY = "isInjected";
 
+  private static final String METRICS_SOURCE_ELAPSED_PREFIX = "metrics.source.elapsed.";
+
   private static int pageSize = 250;
 
   private static final Gson GSON =
@@ -538,6 +540,11 @@ public class EndpointUtil {
       results = retrieveResults(cqlRequest, request, responses);
     }
 
+    final List<String> sourceIds = new ArrayList<>();
+    if (request.getSourceIds() != null) {
+      sourceIds.addAll(request.getSourceIds());
+    }
+
     final Map<String, Serializable> properties =
         responses
             .stream()
@@ -546,34 +553,7 @@ public class EndpointUtil {
             .findFirst()
             .orElse(Collections.emptyMap());
 
-    final String METRICS_SOURCE_ELAPSED_PREFIX = "metrics.source.elapsed.";
-
-    Map<String, Long> hitsPerSource =
-        (Map<String, Long>) properties.getOrDefault("hitsPerSource", new HashMap<String, Long>());
-
-    Map<String, Long> elapsedPerSource = new HashMap<>();
-    properties.forEach(
-        (key, value) -> {
-          if (key.startsWith(METRICS_SOURCE_ELAPSED_PREFIX)) {
-            String source = key.substring(METRICS_SOURCE_ELAPSED_PREFIX.length());
-            elapsedPerSource.put(source, new Long((Integer) value));
-          }
-        });
-
-    Map<String, Long> countPerSource = new HashMap<>();
-
-    if (request.getSourceIds() != null) {
-      request.getSourceIds().forEach(id -> countPerSource.put(id, 0L));
-    }
-
-    results
-        .stream()
-        .map(Result::getMetacard)
-        .forEach(
-            m -> {
-              final String sourceId = (String) m.getSourceId();
-              countPerSource.merge(sourceId, 1L, Long::sum);
-            });
+    stopwatch.stop();
 
     final Set<ProcessingDetails> processingDetails =
         responses
@@ -588,16 +568,48 @@ public class EndpointUtil {
                 });
 
     Map<String, Status> statusBySource = new HashMap<>();
-    if (request.getSourceIds() != null) {
-      request
-          .getSourceIds()
+
+    final long totalElapsedtime = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+
+    // If only one source was provided, construct the status dynamically. Otherwise, use the
+    // properties.
+    if (sourceIds.size() <= 1) {
+      final String id = sourceIds.size() == 1 ? sourceIds.get(0) : "cache";
+      statusBySource.put(
+          id,
+          new Status(
+              id, results.size(), totalElapsedtime, responses.get(0).getHits(), processingDetails));
+    } else {
+      Map<String, Long> hitsPerSource =
+          (Map<String, Long>) properties.getOrDefault("hitsPerSource", new HashMap<String, Long>());
+
+      Map<String, Long> elapsedPerSource = new HashMap<>();
+      properties.forEach(
+          (key, value) -> {
+            if (key.startsWith(METRICS_SOURCE_ELAPSED_PREFIX)) {
+              String source = key.substring(METRICS_SOURCE_ELAPSED_PREFIX.length());
+              elapsedPerSource.put(source, new Long((Integer) value));
+            }
+          });
+
+      Map<String, Long> countPerSource = new HashMap<>();
+      sourceIds.forEach(id -> countPerSource.put(id, 0L));
+      results
+          .stream()
+          .map(Result::getMetacard)
           .forEach(
-              id -> {
-                long elapsed = elapsedPerSource.get(id);
-                long count = countPerSource.get(id);
-                long hits = hitsPerSource.get(id);
-                statusBySource.put(id, new Status(id, count, elapsed, hits, processingDetails));
+              metacard -> {
+                final String sourceId = (String) metacard.getSourceId();
+                countPerSource.merge(sourceId, 1L, Long::sum);
               });
+
+      for (int i = 0; i < sourceIds.size(); i++) {
+        final String id = sourceIds.get(i);
+        long elapsed = elapsedPerSource.getOrDefault(id, 0L);
+        long count = countPerSource.getOrDefault(id, 0L);
+        long hits = hitsPerSource.getOrDefault(id, 0L);
+        statusBySource.put(id, new Status(id, count, elapsed, hits, processingDetails));
+      }
     }
 
     properties.put("statusBySource", (Serializable) statusBySource);
@@ -616,14 +628,11 @@ public class EndpointUtil {
             properties,
             processingDetails);
 
-    stopwatch.stop();
-
     return new CqlQueryResponse(
         cqlRequest.getId(),
         request,
         response,
         cqlRequest.getSourceResponseString(),
-        stopwatch.elapsed(TimeUnit.MILLISECONDS),
         cqlRequest.isNormalize(),
         filterAdapter,
         actionRegistry,

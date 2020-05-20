@@ -379,39 +379,48 @@ Query.Model = PartialAssociatedModel.extend({
     }
     const query = this
 
+    const selectedSources = data.sources
+
+    const harvestedSources = Sources.getHarvested()
+
+    const isHarvested = id => harvestedSources.includes(id) && id !== 'cache'
+    const isFederated = id => !harvestedSources.includes(id) && id !== 'cache'
+
     const localSearchToRun = {
       ...data,
       cql: cqlString,
-      srcs: ['ISRI', 'h1', 'h2'],
+      srcs: selectedSources.filter(isHarvested),
       // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
       start: 1,
     }
 
-    const federatedSearchesToRun = [].filter(a => true).map(source => ({
-      ...data,
-      cql: cqlString,
-      srcs: [source],
-      // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
-      start: 1,
-    }))
+    const federatedSearchesToRun = selectedSources
+      .filter(isFederated)
+      .map(source => ({
+        ...data,
+        cql: cqlString,
+        srcs: [source],
+        // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
+        start: 1,
+      }))
 
-    const cacheSearchToRun = {
-      ...data,
-      // since the "cache" source will return all cached results, need to
-      // limit the cached results to only those from a selected source. This adds metacard_source to the cql string.
-      cql: CacheSourceSelector.trimCacheSources(cqlString, sources),
-      srcs: ['cache'],
-      // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
-      start: 1,
+    const searchesToRun = [localSearchToRun, ...federatedSearchesToRun].filter(
+      search => search.srcs.length > 0
+    )
+
+    if (!properties.isCacheDisabled) {
+      searchesToRun.push({
+        ...data,
+        // since the "cache" source will return all cached results, need to
+        // limit the cached results to only those from a selected source. This adds metacard_source to the cql string.
+        cql: CacheSourceSelector.trimCacheSources(cqlString, sources),
+        srcs: ['cache'],
+        // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
+        start: 1,
+      })
     }
 
-    const searchesToRun = [
-      cacheSearchToRun,
-      localSearchToRun,
-      ...federatedSearchesToRun,
-    ].filter(search => search.srcs.length > 0)
-
-    console.log("Executing Searches: ", searchesToRun)
+    console.log('Executing Searches: ', searchesToRun)
 
     const currentSearches = this.preQueryPlugin(searchesToRun)
 

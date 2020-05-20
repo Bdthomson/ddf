@@ -30,7 +30,6 @@ import ddf.catalog.source.UnsupportedQueryException;
 import ddf.catalog.source.solr.SolrMetacardClientImpl;
 import java.io.Serializable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -56,8 +55,6 @@ public class CqlQueryResponse {
 
   private final Map<String, Map<String, MetacardAttribute>> types;
 
-  private final Status status;
-
   private final Map<String, List<FacetValueCount>> facets;
 
   private final List<String> showingResultsForFields, didYouMeanFields;
@@ -74,7 +71,6 @@ public class CqlQueryResponse {
       QueryRequest request,
       QueryResponse queryResponse,
       String source,
-      long elapsedTime,
       boolean normalize,
       FilterAdapter filterAdapter,
       ActionRegistry actionRegistry,
@@ -82,8 +78,6 @@ public class CqlQueryResponse {
     this.id = id;
 
     this.queryResponse = queryResponse;
-
-    status = new Status(queryResponse, source, elapsedTime);
 
     AtomicBoolean logOnceState = new AtomicBoolean(false);
     Consumer<String> logOnce =
@@ -154,15 +148,7 @@ public class CqlQueryResponse {
     this.userSpellcheckIsOn =
         (Boolean) queryResponse.getProperties().get(SolrMetacardClientImpl.SPELLCHECK_KEY);
 
-    // This sucks, leaking cache implementation details everywhere
-    if ("cache".equals(source)) {
-      final Map<String, Status> cacheStatus = new HashMap<>();
-      cacheStatus.put("cache", status);
-      this.statusBySource = cacheStatus;
-    } else {
-      this.statusBySource =
-          (Map<String, Status>) queryResponse.getProperties().get("statusBySource");
-    }
+    this.statusBySource = (Map<String, Status>) queryResponse.getProperties().get("statusBySource");
   }
 
   private Map<String, List<FacetValueCount>> getFacetResults(Serializable facetResults) {
@@ -202,9 +188,5 @@ public class CqlQueryResponse {
 
   public String getId() {
     return id;
-  }
-
-  public Status getStatus() {
-    return status;
   }
 }
