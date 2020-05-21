@@ -89,13 +89,15 @@ const reducer = (state = [{}], action) => {
     case 'PREVIOUS_PAGE':
       return state.slice(0, -1)
     case 'UPDATE_RESULTS':
-      const srcs = action.payload.results
-        .map(({ src }) => src)
-        .reduce((counts, src) => {
-          if (counts[src] === undefined) {
-            counts[src] = 0
+      console.log('UPDATE_RESULTS:: ', action.payload)
+      const srcs = action.payload.status
+        .filter(status => status.id !== 'cache')
+        .map(({ id, count }) => ({ id, count }))
+        .reduce((counts, status) => {
+          const { id, count } = status
+          if (count !== 0) {
+            counts[id] = count
           }
-          counts[src] += 1
           return counts
         }, {})
 
@@ -220,7 +222,8 @@ Query.Model = PartialAssociatedModel.extend({
     this.listenTo(this, 'change:cql', () => this.set('isOutdated', true))
 
     const sync = () => {
-      this.dispatch(updateResults(this.get('result').toJSON())) //do we need this?  It's expensive
+      const resultJson = this.get('result').toJSON()
+      this.dispatch(updateResults(resultJson)) //do we need this?  It's expensive
       this.set('serverPageIndex', serverPageIndex(this.state))
 
       const totalHits = this.get('result')
@@ -385,12 +388,19 @@ Query.Model = PartialAssociatedModel.extend({
     const isHarvested = id => harvestedSources.includes(id) && id !== 'cache'
     const isFederated = id => !harvestedSources.includes(id) && id !== 'cache'
 
+    const query = this
+
+    const localSources = selectedSources.filter(isHarvested)
+    const localSourcesStartIndex =
+      localSources
+        .map(query.getStartIndexForSource)
+        .reduce((a, b) => a + b, 1) - localSources.length
+
     const localSearchToRun = {
       ...data,
       cql: cqlString,
-      srcs: selectedSources.filter(isHarvested),
-      // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
-      start: 1,
+      srcs: localSources,
+      start: localSourcesStartIndex,
     }
 
     const federatedSearchesToRun = selectedSources
@@ -399,8 +409,7 @@ Query.Model = PartialAssociatedModel.extend({
         ...data,
         cql: cqlString,
         srcs: [source],
-        // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
-        start: 1,
+        start: query.getStartIndexForSource(source),
       }))
 
     const searchesToRun = [localSearchToRun, ...federatedSearchesToRun].filter(
@@ -414,16 +423,12 @@ Query.Model = PartialAssociatedModel.extend({
         // limit the cached results to only those from a selected source. This adds metacard_source to the cql string.
         cql: CacheSourceSelector.trimCacheSources(cqlString, sources),
         srcs: ['cache'],
-        // TODO: Blake - This needs to change to `getStartIndexForSourceGroup`, of which there are 3 source groups (Cache, Harvested, Federated)
-        start: 1,
+        start: query.getStartIndexForSource('cache'),
       })
     }
 
-    console.log('Executing Searches: ', searchesToRun)
-
     const currentSearches = this.preQueryPlugin(searchesToRun)
 
-    console.log('About to run queries, state: ', this.state)
     currentSearches.then(currentSearches => {
       if (currentSearches.length === 0) {
         announcement.announce({
@@ -478,6 +483,7 @@ Query.Model = PartialAssociatedModel.extend({
               })
             }
 
+            // TODO: Need to do something here?
             const srcStatus = result.get('status').get(search.src)
             if (srcStatus) {
               srcStatus.set({
